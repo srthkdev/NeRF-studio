@@ -116,3 +116,4 @@ models/
 # Docker
 .dockerignore
 .kiro
+nerf-master/
