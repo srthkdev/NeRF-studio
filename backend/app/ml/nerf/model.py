@@ -8,15 +8,17 @@ from typing import Tuple
 class PositionalEncoding:
     """Positional encoding for NeRF as described in the original paper"""
     
-    def __init__(self, num_frequencies: int, include_input: bool = True):
+    def __init__(self, num_frequencies: int, input_dim: int = 3, include_input: bool = True):
         """
         Initialize positional encoding
         
         Args:
             num_frequencies: Number of frequency bands (L in the paper)
+            input_dim: Dimension of input features (default: 3 for xyz coordinates)
             include_input: Whether to include the original input in the encoding
         """
         self.num_frequencies = num_frequencies
+        self.input_dim = input_dim
         self.include_input = include_input
         self.funcs = [torch.sin, torch.cos]
         
@@ -28,11 +30,15 @@ class PositionalEncoding:
         Apply positional encoding to input tensor
         
         Args:
-            x: Input tensor of shape [..., dim]
+            x: Input tensor of shape [..., input_dim]
             
         Returns:
-            Encoded tensor of shape [..., dim * (2 * num_frequencies) + (dim if include_input else 0)]
+            Encoded tensor of shape [..., input_dim * (2 * num_frequencies) + (input_dim if include_input else 0)]
         """
+        # Validate input dimensions
+        if x.shape[-1] != self.input_dim:
+            raise ValueError(f"Expected input dimension {self.input_dim}, got {x.shape[-1]}")
+            
         out = []
         if self.include_input:
             out.append(x)
@@ -46,7 +52,7 @@ class PositionalEncoding:
     @property
     def output_dim(self) -> int:
         """Get the output dimension of the encoding"""
-        return x_dim * ((2 * self.num_frequencies) + (1 if self.include_input else 0))
+        return self.input_dim * ((2 * self.num_frequencies) + (1 if self.include_input else 0))
 
 
 class NeRFModel(nn.Module):
@@ -77,12 +83,12 @@ class NeRFModel(nn.Module):
         super().__init__()
         
         # Positional encodings
-        self.pos_encoder = PositionalEncoding(pos_freq_bands, include_input=True)
-        self.view_encoder = PositionalEncoding(view_freq_bands, include_input=True)
+        self.pos_encoder = PositionalEncoding(pos_freq_bands, input_dim=pos_dim, include_input=True)
+        self.view_encoder = PositionalEncoding(view_freq_bands, input_dim=view_dim, include_input=True)
         
         # Calculate input dimensions after encoding
-        pos_encoded_dim = pos_dim * (1 + 2 * pos_freq_bands)
-        view_encoded_dim = view_dim * (1 + 2 * view_freq_bands)
+        pos_encoded_dim = self.pos_encoder.output_dim
+        view_encoded_dim = self.view_encoder.output_dim
         
         # MLP layers
         self.layers = nn.ModuleList()
