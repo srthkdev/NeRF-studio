@@ -47,7 +47,7 @@ class NeRFDataset(Dataset):
 # Utility for ray batching from dataset
 
 def get_ray_batches(dataset, intrinsics, near=2.0, far=6.0, batch_size=1024, shuffle=True, device='cpu'):
-    from backend.app.ml.nerf.rays import generate_rays
+    from app.ml.nerf.rays import generate_rays
     all_rays = []
     all_rgbs = []
     for i in range(len(dataset)):

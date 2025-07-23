@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from typing import Dict, Tuple, Optional, Union
-from backend.app.ml.nerf.rays import sample_stratified, sample_hierarchical, combine_hierarchical_samples
+from app.ml.nerf.rays import sample_stratified, sample_hierarchical, combine_hierarchical_samples
 
 
 def volume_render_rays(

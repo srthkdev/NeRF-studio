@@ -2,7 +2,7 @@ import os
 import numpy as np
 import torch
 import tempfile
-from backend.app.ml.nerf.dataset import NeRFDataset, get_ray_batches
+from app.ml.nerf.dataset import NeRFDataset, get_ray_batches
 from PIL import Image
 
 def create_dummy_data(tmpdir, num_images=3, img_wh=(32, 32)):

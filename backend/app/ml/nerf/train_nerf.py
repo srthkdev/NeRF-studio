@@ -10,10 +10,10 @@ from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import logging
 
-from backend.app.ml.nerf.dataset import NeRFDataset, get_ray_batches
-from backend.app.ml.nerf.model import HierarchicalNeRF
-from backend.app.ml.nerf.volume_rendering import compute_psnr, compute_ssim
-from backend.app.ml.nerf.rays import generate_rays
+from app.ml.nerf.dataset import NeRFDataset, get_ray_batches
+from app.ml.nerf.model import HierarchicalNeRF
+from app.ml.nerf.volume_rendering import compute_psnr, compute_ssim
+from app.ml.nerf.rays import generate_rays
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

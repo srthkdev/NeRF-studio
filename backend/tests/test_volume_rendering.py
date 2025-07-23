@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import pytest
-from backend.app.ml.nerf.volume_rendering import (
+from app.ml.nerf.volume_rendering import (
     volume_render_rays,
     alpha_composite_rays,
     render_rays_with_model,
@@ -11,7 +11,7 @@ from backend.app.ml.nerf.volume_rendering import (
     add_noise_regularization,
     raw2outputs
 )
-from backend.app.ml.nerf.model import NeRFModel
+from app.ml.nerf.model import NeRFModel
 
 
 class MockNeRFModel(torch.nn.Module):

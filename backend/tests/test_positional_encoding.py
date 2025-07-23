@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import pytest
-from backend.app.ml.nerf.model import PositionalEncoding
+from app.ml.nerf.model import PositionalEncoding
 
 
 def test_positional_encoding_output_shape():

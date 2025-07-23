@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import pytest
-from backend.app.ml.nerf.rays import (
+from app.ml.nerf.rays import (
     generate_rays,
     generate_rays_from_camera,
     sample_stratified,

@@ -55,7 +55,23 @@ class MeshExtractor:
                 dummy_dirs = torch.zeros_like(batch_points)
                 
                 # Forward pass to get density
-                rgb, sigma = self.model(batch_points, dummy_dirs)
+                # Handle different model types
+                if hasattr(self.model, 'coarse_model'):
+                    # HierarchicalNeRF model - we need to create rays
+                    batch_size = batch_points.shape[0]
+                    # Create dummy rays with near=0, far=1
+                    rays_o = torch.zeros(batch_size, 3, device=self.device)
+                    rays_d = batch_points - rays_o
+                    near = torch.zeros(batch_size, 1, device=self.device)
+                    far = torch.ones(batch_size, 1, device=self.device)
+                    
+                    # Get coarse output only for density
+                    with torch.no_grad():
+                        coarse_output = self.model.coarse_model(batch_points, dummy_dirs)
+                        rgb, sigma = coarse_output
+                else:
+                    # Regular NeRF model
+                    rgb, sigma = self.model(batch_points, dummy_dirs)
                 densities.append(sigma.squeeze(-1).cpu())
         
         densities = torch.cat(densities, dim=0)
@@ -245,7 +261,7 @@ def extract_mesh_from_checkpoint(checkpoint_path: str,
         config = checkpoint.get('config', {})
         
         # Create model
-        from backend.app.ml.nerf.model import HierarchicalNeRF
+        from app.ml.nerf.model import HierarchicalNeRF
         
         model = HierarchicalNeRF(
             pos_freq_bands=config.get('pos_freq_bands', 10),

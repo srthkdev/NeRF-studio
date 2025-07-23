@@ -4,6 +4,9 @@ import './App.css';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Text, Box } from '@react-three/drei';
 import { Line } from 'react-chartjs-2';
+import { AdvancedNeRFViewer } from './components/AdvancedNeRFViewer';
+import { AdvancedExportManager } from './components/AdvancedExportManager';
+import { PerformanceDashboard } from './components/PerformanceDashboard';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -79,6 +82,9 @@ function App() {
   const [meshFiles, setMeshFiles] = useState<{[key: string]: string}>({});
   const [systemMetrics, setSystemMetrics] = useState<any>(null);
   const [trainingSummary, setTrainingSummary] = useState<any>(null);
+  const [showAdvancedViewer, setShowAdvancedViewer] = useState(false);
+  const [showAdvancedExport, setShowAdvancedExport] = useState(false);
+  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
 
   // Chart.js data state
   const [chartData, setChartData] = useState<{
@@ -882,64 +888,111 @@ function App() {
             
             {/* Mesh Extraction Section */}
             <div className="mt-8">
-              <h3 className="font-semibold mb-4">Mesh Extraction</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-4">
-                  Extract 3D mesh from trained NeRF model. Supports GLTF, OBJ, and PLY formats.
-                </p>
-                
-                <div className="flex gap-2 mb-4">
-                  <button
-                    onClick={extractMesh}
-                    disabled={meshExtracting || !job || job.status !== 'completed'}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-                  >
-                    {meshExtracting ? 'Extracting...' : 'Extract Mesh'}
-                  </button>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Mesh Extraction</h3>
+                <button
+                  onClick={() => setShowAdvancedExport(!showAdvancedExport)}
+                  className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm"
+                >
+                  {showAdvancedExport ? 'Basic Export' : 'Advanced Export'}
+                </button>
+              </div>
+              
+              {showAdvancedExport ? (
+                <AdvancedExportManager 
+                  projectId={selectedProject?.id || ''}
+                  onExportComplete={(files) => setMeshFiles(files)}
+                />
+              ) : (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Extract 3D mesh from trained NeRF model. Supports GLTF, OBJ, and PLY formats.
+                  </p>
+                  
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={extractMesh}
+                      disabled={meshExtracting || !job || job.status !== 'completed'}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+                    >
+                      {meshExtracting ? 'Extracting...' : 'Extract Mesh'}
+                    </button>
+                    
+                    {Object.keys(meshFiles).length > 0 && (
+                      <button
+                        onClick={downloadAllMeshes}
+                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                      >
+                        Download All Formats
+                      </button>
+                    )}
+                  </div>
                   
                   {Object.keys(meshFiles).length > 0 && (
-                    <button
-                      onClick={downloadAllMeshes}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                    >
-                      Download All Formats
-                    </button>
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Available Formats:</h4>
+                      <div className="flex gap-2 flex-wrap">
+                        {Object.entries(meshFiles).map(([format, path]) => (
+                          <button
+                            key={format}
+                            onClick={() => downloadMesh(format)}
+                            className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm"
+                          >
+                            Download {format.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {(!job || job.status !== 'completed') && (
+                    <p className="text-sm text-orange-600 mt-2">
+                      ⚠️ Train the model first to extract mesh
+                    </p>
                   )}
                 </div>
-                
-                {Object.keys(meshFiles).length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Available Formats:</h4>
-                    <div className="flex gap-2 flex-wrap">
-                      {Object.entries(meshFiles).map(([format, path]) => (
-                        <button
-                          key={format}
-                          onClick={() => downloadMesh(format)}
-                          className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm"
-                        >
-                          Download {format.toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {(!job || job.status !== 'completed') && (
-                  <p className="text-sm text-orange-600 mt-2">
-                    ⚠️ Train the model first to extract mesh
-                  </p>
-                )}
-              </div>
+              )}
             </div>
 
             {/* Enhanced 3D Viewer */}
             <div className="mt-8">
-              <h3 className="font-semibold mb-2">3D Scene Viewer</h3>
-              <div className="h-96 border border-gray-200 rounded bg-gray-900">
-                <Canvas camera={{ position: [3, 3, 3], fov: 50 }}>
-                  <Scene3D />
-                </Canvas>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-semibold">3D Scene Viewer</h3>
+                <div className="space-x-2">
+                  <button
+                    onClick={() => setShowAdvancedViewer(!showAdvancedViewer)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                  >
+                    {showAdvancedViewer ? 'Basic Viewer' : 'Advanced Viewer'}
+                  </button>
+                  <button
+                    onClick={() => setShowPerformanceDashboard(!showPerformanceDashboard)}
+                    className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
+                  >
+                    Performance Dashboard
+                  </button>
+                </div>
               </div>
+              
+              {showAdvancedViewer ? (
+                <div className="h-96 border border-gray-200 rounded">
+                  <AdvancedNeRFViewer 
+                    modelData={selectedProject ? { cameraPoses: cameraCenters } : null}
+                    quality="medium"
+                    enableLOD={true}
+                    showFrustums={true}
+                    showAxes={true}
+                    showGrid={true}
+                  />
+                </div>
+              ) : (
+                <div className="h-96 border border-gray-200 rounded bg-gray-900">
+                  <Canvas camera={{ position: [3, 3, 3], fov: 50 }}>
+                    <Scene3D />
+                  </Canvas>
+                </div>
+              )}
+              
               <div className="mt-2 text-sm text-gray-600">
                 {cameraCenters.length > 0 ? 
                   `${cameraCenters.length} camera positions loaded` : 
@@ -950,6 +1003,26 @@ function App() {
           </section>
         )}
       </div>
+
+      {/* Performance Dashboard Modal */}
+      {showPerformanceDashboard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto m-4">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Performance Dashboard</h2>
+                <button
+                  onClick={() => setShowPerformanceDashboard(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              <PerformanceDashboard />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

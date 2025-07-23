@@ -277,8 +277,8 @@ class HierarchicalNeRF(nn.Module):
         Returns:
             Dictionary containing coarse and fine rendered outputs
         """
-        from backend.app.ml.nerf.rays import sample_stratified, sample_hierarchical, combine_hierarchical_samples
-        from backend.app.ml.nerf.volume_rendering import render_rays_with_model
+        from app.ml.nerf.rays import sample_stratified, sample_hierarchical, combine_hierarchical_samples
+        from app.ml.nerf.volume_rendering import render_rays_with_model
         
         # Coarse sampling
         points_coarse, z_vals_coarse = sample_stratified(

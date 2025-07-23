@@ -1,6 +1,6 @@
 import tempfile
 import numpy as np
-from backend.app.ml.nerf import colmap_utils
+from app.ml.nerf import colmap_utils
 
 def test_extract_camera_poses_real():
     with tempfile.TemporaryDirectory() as tmpdir:

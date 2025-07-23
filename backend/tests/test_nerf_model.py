@@ -1,7 +1,7 @@
 import torch
 import pytest
 import numpy as np
-from backend.app.ml.nerf.model import NeRFModel, PositionalEncoding, HierarchicalNeRF
+from app.ml.nerf.model import NeRFModel, PositionalEncoding, HierarchicalNeRF
 
 
 class TestPositionalEncoding:
@@ -348,7 +348,7 @@ class TestSamplingWeights:
     
     def test_compute_sampling_weights(self):
         """Test sampling weight computation"""
-        from backend.app.ml.nerf.model import compute_sampling_weights
+        from app.ml.nerf.model import compute_sampling_weights
         
         batch_size = 10
         n_samples = 64
@@ -374,7 +374,7 @@ class TestSamplingWeights:
     
     def test_verify_sampling_distribution(self):
         """Test sampling distribution verification"""
-        from backend.app.ml.nerf.model import verify_sampling_distribution
+        from app.ml.nerf.model import verify_sampling_distribution
         
         batch_size = 5
         n_samples = 32
@@ -390,7 +390,7 @@ class TestSamplingWeights:
         rays_d = rays_d / torch.norm(rays_d, dim=-1, keepdim=True)
         
         # Compute weights
-        from backend.app.ml.nerf.model import compute_sampling_weights
+        from app.ml.nerf.model import compute_sampling_weights
         weights = compute_sampling_weights(sigma, z_vals, rays_d)
         
         # Verify distribution
@@ -407,7 +407,7 @@ class TestSamplingWeights:
     
     def test_create_coarse_fine_models(self):
         """Test creation of separate coarse and fine models"""
-        from backend.app.ml.nerf.model import create_coarse_fine_models
+        from app.ml.nerf.model import create_coarse_fine_models
         
         config = {
             "hidden_dim": 128,
@@ -432,7 +432,7 @@ class TestSamplingWeights:
     
     def test_initialize_hierarchical_weights(self):
         """Test weight initialization for hierarchical models"""
-        from backend.app.ml.nerf.model import initialize_hierarchical_weights, create_coarse_fine_models
+        from app.ml.nerf.model import initialize_hierarchical_weights, create_coarse_fine_models
         
         config = {"hidden_dim": 64, "num_layers": 4}
         coarse_model, fine_model = create_coarse_fine_models(config)

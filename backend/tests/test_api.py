@@ -1,7 +1,7 @@
 import tempfile
 import os
 from fastapi.testclient import TestClient
-from backend.app.api.v1.api import router
+from app.api.v1.api import router
 import numpy as np
 from PIL import Image
 import threading

@@ -4,7 +4,7 @@ import os
 import json
 import numpy as np
 from PIL import Image
-from backend.app.core.validation import InputValidator, ValidationError, validate_api_input
+from app.core.validation import InputValidator, ValidationError, validate_api_input
 
 class TestInputValidator:
     """Test input validation functionality."""
@@ -153,8 +153,8 @@ class TestInputValidator:
     
     def test_validate_file_path(self):
         """Test file path validation."""
-        # Create temporary file
-        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        # Create temporary file in current directory
+        with tempfile.NamedTemporaryFile(delete=False, dir='.') as tmp_file:
             tmp_path = tmp_file.name
         
         # Valid path

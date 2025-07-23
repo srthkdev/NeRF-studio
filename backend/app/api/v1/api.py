@@ -12,21 +12,27 @@ import asyncio
 from fastapi import HTTPException
 import json
 import logging
-from backend.app.ml.nerf.train_nerf import NeRFTrainer
-from backend.app.ml.nerf.model import HierarchicalNeRF
-from backend.app.ml.nerf.rays import generate_rays
-from backend.app.ml.nerf.volume_rendering import volume_render_rays
+from app.ml.nerf.train_nerf import NeRFTrainer
+from app.ml.nerf.model import HierarchicalNeRF
+from app.ml.nerf.rays import generate_rays
+from app.ml.nerf.volume_rendering import volume_render_rays
 import base64
 import io
-from backend.app.ml.nerf.mesh_extraction import extract_mesh_from_checkpoint
+from app.ml.nerf.mesh_extraction import extract_mesh_from_checkpoint
 import zipfile
 import tempfile
 import shutil
-from backend.app.core.validation import InputValidator, ValidationError, validate_api_input
+from app.core.validation import InputValidator, ValidationError, validate_api_input
 from datetime import datetime
 from fastapi import Body
 from starlette.responses import FileResponse, BackgroundTask
-from backend.app.core.monitoring import get_system_metrics, get_training_metrics, get_training_summary, record_training_step
+from app.core.monitoring import get_system_metrics, get_training_metrics, get_training_summary, record_training_step
+from app.ml.nerf.inference import FastNeRFInference, RenderConfig, create_inference_pipeline
+import cv2
+import base64
+from app.ml.nerf.colmap_utils import estimate_camera_poses_from_images, validate_pose_file, ManualPoseProcessor
+from app.ml.nerf.advanced_export import AdvancedMeshExporter, ExportConfig, ExportFormat, ExportProgressTracker
+from app.core.performance_monitor import get_performance_monitor, PerformanceMonitor, TrainingMetrics, SystemMetrics
 
 router = APIRouter()
 
@@ -40,6 +46,10 @@ os.makedirs(PROJECT_ROOT, exist_ok=True)
 # Global job storage with trainer instances
 JOBS = {}
 TRAINERS = {}
+
+# Performance monitoring
+performance_monitor = get_performance_monitor()
+export_progress_trackers = {}
 
 @router.post("/manual_pose_upload")
 def manual_pose_upload(pose: List[float] = Form(...)):
@@ -636,7 +646,12 @@ async def extract_mesh(
     project_id: str,
     bounds: List[float] = Body(default=[-2, 2, -2, 2, -2, 2]),
     resolution: int = Body(default=128),
-    formats: List[str] = Body(default=["gltf", "obj", "ply"])
+    formats: List[str] = Body(default=["gltf", "obj", "ply"]),
+    quality: str = Body(default="high"),
+    include_textures: bool = Body(default=True),
+    bake_textures: bool = Body(default=True),
+    optimize_mesh: bool = Body(default=True),
+    compression: bool = Body(default=True)
 ):
     """Extract mesh from trained NeRF model."""
     try:
@@ -689,25 +704,353 @@ async def extract_mesh(
         logging.error(f"Mesh extraction failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/projects/{project_id}/render_path")
-def render_camera_path(project_id: str, num_frames: int = 50):
-    """Render a camera path around the scene for video generation"""
-    if project_id not in PROJECTS:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
-    # Generate a simple circular camera path
-    # In a full implementation, you would:
-    # 1. Load the trained model
-    # 2. Generate camera poses along a path
-    # 3. Render each frame
-    # 4. Return the frames or save as video
-    
-    # For now, return a placeholder
-    return {
-        "status": "camera_path_rendering_not_implemented",
-        "message": "Camera path rendering will be implemented in the next iteration",
-        "num_frames": num_frames
-    }
+@router.post("/projects/{project_id}/render-novel-view")
+async def render_novel_view(
+    project_id: str,
+    camera_to_world: List[List[float]] = Body(...),
+    config: Dict[str, Any] = Body(default={})
+):
+    """Render a novel view from the given camera pose."""
+    try:
+        project = PROJECTS[project_id]
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Check if model is trained
+        checkpoint_path = os.path.join(project["dir"], "checkpoints", "latest.pt")
+        if not os.path.exists(checkpoint_path):
+            raise HTTPException(status_code=400, detail="No trained model found. Please train the model first.")
+        
+        # Validate camera pose
+        if len(camera_to_world) != 4 or any(len(row) != 4 for row in camera_to_world):
+            raise HTTPException(status_code=400, detail="Invalid camera pose matrix. Must be 4x4.")
+        
+        camera_to_world = np.array(camera_to_world)
+        
+        # Create render config
+        render_config = RenderConfig(
+            image_width=config.get("image_width", 800),
+            image_height=config.get("image_height", 600),
+            fov=config.get("fov", 60.0),
+            near=config.get("near", 0.1),
+            far=config.get("far", 10.0),
+            n_coarse=config.get("n_coarse", 64),
+            n_fine=config.get("n_fine", 128),
+            chunk_size=config.get("chunk_size", 4096),
+            use_view_frustum_culling=config.get("use_view_frustum_culling", True),
+            use_adaptive_sampling=config.get("use_adaptive_sampling", True),
+            quality_level=config.get("quality_level", "medium")
+        )
+        
+        # Create inference pipeline
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        pipeline = create_inference_pipeline(checkpoint_path, device)
+        
+        # Render novel view
+        image = pipeline.render_novel_view(camera_to_world, render_config)
+        
+        # Convert to base64 for JSON response
+        image_uint8 = (image * 255).astype(np.uint8)
+        _, buffer = cv2.imencode('.jpg', image_uint8)
+        image_base64 = base64.b64encode(buffer).decode('utf-8')
+        
+        # Get performance stats
+        stats = pipeline.get_performance_stats()
+        
+        return {
+            "image": image_base64,
+            "format": "jpg",
+            "width": render_config.image_width,
+            "height": render_config.image_height,
+            "performance_stats": stats
+        }
+        
+    except Exception as e:
+        logging.error(f"Novel view rendering failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/projects/{project_id}/render-camera-path")
+async def render_camera_path(
+    project_id: str,
+    camera_poses: List[List[List[float]]] = Body(...),
+    config: Dict[str, Any] = Body(default={})
+):
+    """Render a sequence of views along a camera path."""
+    try:
+        project = PROJECTS[project_id]
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Check if model is trained
+        checkpoint_path = os.path.join(project["dir"], "checkpoints", "latest.pt")
+        if not os.path.exists(checkpoint_path):
+            raise HTTPException(status_code=400, detail="No trained model found. Please train the model first.")
+        
+        # Validate camera poses
+        if len(camera_poses) == 0:
+            raise HTTPException(status_code=400, detail="No camera poses provided.")
+        
+        for i, pose in enumerate(camera_poses):
+            if len(pose) != 4 or any(len(row) != 4 for row in pose):
+                raise HTTPException(status_code=400, detail=f"Invalid camera pose matrix at index {i}. Must be 4x4.")
+        
+        camera_poses = [np.array(pose) for pose in camera_poses]
+        
+        # Create render config
+        render_config = RenderConfig(
+            image_width=config.get("image_width", 800),
+            image_height=config.get("image_height", 600),
+            fov=config.get("fov", 60.0),
+            near=config.get("near", 0.1),
+            far=config.get("far", 10.0),
+            n_coarse=config.get("n_coarse", 64),
+            n_fine=config.get("n_fine", 128),
+            chunk_size=config.get("chunk_size", 4096),
+            use_view_frustum_culling=config.get("use_view_frustum_culling", True),
+            use_adaptive_sampling=config.get("use_adaptive_sampling", True),
+            quality_level=config.get("quality_level", "medium")
+        )
+        
+        # Create inference pipeline
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        pipeline = create_inference_pipeline(checkpoint_path, device)
+        
+        # Render camera path
+        images = pipeline.render_camera_path(camera_poses, render_config)
+        
+        # Convert images to base64
+        image_data = []
+        for i, image in enumerate(images):
+            image_uint8 = (image * 255).astype(np.uint8)
+            _, buffer = cv2.imencode('.jpg', image_uint8)
+            image_base64 = base64.b64encode(buffer).decode('utf-8')
+            image_data.append({
+                "frame": i,
+                "image": image_base64,
+                "format": "jpg"
+            })
+        
+        # Get performance stats
+        stats = pipeline.get_performance_stats()
+        
+        return {
+            "frames": image_data,
+            "total_frames": len(images),
+            "width": render_config.image_width,
+            "height": render_config.image_height,
+            "performance_stats": stats
+        }
+        
+    except Exception as e:
+        logging.error(f"Camera path rendering failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/projects/{project_id}/generate-circular-path")
+async def generate_circular_camera_path(
+    project_id: str,
+    radius: float = Body(default=3.0),
+    height: float = Body(default=1.0),
+    num_frames: int = Body(default=30),
+    center: List[float] = Body(default=[0.0, 0.0, 0.0])
+):
+    """Generate a circular camera path around the scene."""
+    try:
+        project = PROJECTS[project_id]
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Validate parameters
+        if radius <= 0:
+            raise HTTPException(status_code=400, detail="Radius must be positive.")
+        if num_frames < 2:
+            raise HTTPException(status_code=400, detail="Number of frames must be at least 2.")
+        
+        # Generate circular path
+        camera_poses = []
+        for i in range(num_frames):
+            angle = 2 * np.pi * i / num_frames
+            
+            # Calculate camera position
+            x = center[0] + radius * np.cos(angle)
+            y = center[1] + height
+            z = center[2] + radius * np.sin(angle)
+            
+            # Calculate look-at direction (towards center)
+            look_x = center[0] - x
+            look_y = center[1] - y
+            look_z = center[2] - z
+            
+            # Create camera-to-world transformation matrix
+            # This is a simplified version - in practice you'd use proper camera matrix construction
+            forward = np.array([look_x, look_y, look_z])
+            forward = forward / np.linalg.norm(forward)
+            
+            right = np.cross(forward, np.array([0, 1, 0]))
+            right = right / np.linalg.norm(right)
+            
+            up = np.cross(right, forward)
+            
+            camera_to_world = np.eye(4)
+            camera_to_world[:3, 0] = right
+            camera_to_world[:3, 1] = up
+            camera_to_world[:3, 2] = -forward
+            camera_to_world[:3, 3] = [x, y, z]
+            
+            camera_poses.append(camera_to_world.tolist())
+        
+        return {
+            "camera_poses": camera_poses,
+            "num_frames": num_frames,
+            "radius": radius,
+            "height": height,
+            "center": center
+        }
+        
+    except Exception as e:
+        logging.error(f"Camera path generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/projects/{project_id}/estimate-poses")
+async def estimate_camera_poses(
+    project_id: str,
+    quality: str = Body(default="medium")
+):
+    """Estimate camera poses from uploaded images using COLMAP."""
+    try:
+        project = PROJECTS[project_id]
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Check if images are uploaded
+        if not project.get("images"):
+            raise HTTPException(status_code=400, detail="No images uploaded. Please upload images first.")
+        
+        # Validate quality parameter
+        if quality not in ["low", "medium", "high"]:
+            raise HTTPException(status_code=400, detail="Quality must be 'low', 'medium', or 'high'")
+        
+        # Get image directory
+        image_dir = os.path.join(project["dir"], "images")
+        if not os.path.exists(image_dir):
+            raise HTTPException(status_code=400, detail="Image directory not found")
+        
+        # Estimate camera poses using COLMAP
+        poses = estimate_camera_poses_from_images(project["dir"], image_dir, quality)
+        
+        if not poses:
+            raise HTTPException(status_code=500, detail="Camera pose estimation failed. Check image quality and overlap.")
+        
+        # Save poses
+        poses_path = os.path.join(project["dir"], "poses.json")
+        with open(poses_path, "w") as f:
+            json.dump(poses, f, indent=2)
+        
+        # Update project
+        project["poses"] = poses
+        save_project_meta(project_id, {"config": project["config"], "poses": project["poses"], "images": project["images"]})
+        
+        return {
+            "message": f"Estimated {len(poses)} camera poses",
+            "poses": poses,
+            "quality": quality
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Camera pose estimation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/projects/{project_id}/create-circular-poses")
+async def create_circular_camera_poses(
+    project_id: str,
+    radius: float = Body(default=3.0),
+    height: float = Body(default=1.0),
+    num_poses: int = Body(default=8),
+    center: List[float] = Body(default=[0.0, 0.0, 0.0])
+):
+    """Create circular camera poses for testing."""
+    try:
+        project = PROJECTS[project_id]
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Validate parameters
+        if radius <= 0:
+            raise HTTPException(status_code=400, detail="Radius must be positive")
+        if num_poses < 2:
+            raise HTTPException(status_code=400, detail="Number of poses must be at least 2")
+        
+        # Create circular camera path
+        camera_matrices = ManualPoseProcessor.create_circular_camera_path(
+            center, radius, height, num_poses
+        )
+        
+        # Create poses with dummy filenames
+        poses = []
+        for i, matrix in enumerate(camera_matrices):
+            poses.append({
+                "filename": f"circular_pose_{i:03d}.jpg",
+                "camera_to_world": matrix.tolist()
+            })
+        
+        # Save poses
+        poses_path = os.path.join(project["dir"], "poses.json")
+        with open(poses_path, "w") as f:
+            json.dump(poses, f, indent=2)
+        
+        # Update project
+        project["poses"] = poses
+        save_project_meta(project_id, {"config": project["config"], "poses": project["poses"], "images": project["images"]})
+        
+        return {
+            "message": f"Created {len(poses)} circular camera poses",
+            "poses": poses,
+            "radius": radius,
+            "height": height,
+            "center": center
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Circular pose creation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/projects/{project_id}/validate-poses")
+async def validate_camera_poses(project_id: str):
+    """Validate uploaded camera poses."""
+    try:
+        project = PROJECTS[project_id]
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        poses = project.get("poses", [])
+        if not poses:
+            raise HTTPException(status_code=400, detail="No camera poses found")
+        
+        # Validate poses
+        valid_poses = []
+        invalid_poses = []
+        
+        for i, pose in enumerate(poses):
+            if ManualPoseProcessor.validate_camera_pose(pose):
+                valid_poses.append(pose)
+            else:
+                invalid_poses.append({"index": i, "pose": pose})
+        
+        return {
+            "total_poses": len(poses),
+            "valid_poses": len(valid_poses),
+            "invalid_poses": len(invalid_poses),
+            "invalid_details": invalid_poses
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Pose validation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/projects/{project_id}/download-mesh")
 async def download_mesh(project_id: str, format: str = "gltf"):
@@ -834,3 +1177,167 @@ async def get_training_performance_summary():
     except Exception as e:
         logging.error(f"Training summary failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to get training summary")
+
+@router.get("/export/{project_id}/progress")
+async def get_export_progress(project_id: str):
+    """Get export progress for a project."""
+    try:
+        if project_id not in export_progress_trackers:
+            raise HTTPException(status_code=404, detail="Export not found")
+        
+        tracker = export_progress_trackers[project_id]
+        return tracker.get_status()
+    except Exception as e:
+        logger.error(f"Failed to get export progress: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/export/{project_id}/advanced")
+async def advanced_export(
+    project_id: str,
+    export_config: Dict[str, Any] = Body(...)
+):
+    """Advanced mesh export with custom configuration."""
+    try:
+        project = PROJECTS[project_id]
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Check if model is trained
+        checkpoint_path = os.path.join(project["dir"], "checkpoints", "latest.pt")
+        if not os.path.exists(checkpoint_path):
+            raise HTTPException(status_code=400, detail="No trained model found. Please train the model first.")
+        
+        # Load model
+        checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        config = checkpoint.get('config', {})
+        
+        model = HierarchicalNeRF(
+            pos_freq_bands=config.get('pos_freq_bands', 10),
+            view_freq_bands=config.get('view_freq_bands', 4),
+            hidden_dim=config.get('hidden_dim', 256),
+            num_layers=config.get('num_layers', 8),
+            n_coarse=config.get('n_coarse', 64),
+            n_fine=config.get('n_fine', 128)
+        )
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.eval()
+        
+        # Create export configuration
+        config = ExportConfig(
+            format=ExportFormat(export_config.get('format', 'gltf')),
+            resolution=export_config.get('resolution', 128),
+            texture_resolution=export_config.get('texture_resolution', 1024),
+            include_textures=export_config.get('include_textures', True),
+            bake_textures=export_config.get('bake_textures', True),
+            optimize_mesh=export_config.get('optimize_mesh', True),
+            compression=export_config.get('compression', True),
+            quality=export_config.get('quality', 'high'),
+            bounds=export_config.get('bounds', [-2, 2, -2, 2, -2, 2])
+        )
+        
+        # Create progress tracker
+        progress_tracker = ExportProgressTracker()
+        export_progress_trackers[project_id] = progress_tracker
+        
+        def progress_callback(stage: str, progress: float, message: str = ""):
+            progress_tracker.update(stage, progress, message)
+        
+        # Export in background
+        def export_background():
+            try:
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                model = model.to(device)
+                
+                exporter = AdvancedMeshExporter(model, device)
+                exporter.set_progress_callback(progress_callback)
+                
+                output_dir = os.path.join(project["dir"], "exports")
+                os.makedirs(output_dir, exist_ok=True)
+                
+                exported_files = exporter.extract_mesh_with_textures(config, output_dir)
+                
+                # Update project metadata
+                project["mesh_files"] = exported_files
+                save_project_meta(project_id, project)
+                
+            except Exception as e:
+                logger.error(f"Background export failed: {e}")
+                progress_tracker.update("error", 0.0, str(e))
+        
+        # Start background export
+        thread = threading.Thread(target=export_background, daemon=True)
+        thread.start()
+        
+        return {
+            "status": "started",
+            "message": "Advanced export started",
+            "export_id": project_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Advanced export failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/performance/alerts")
+async def get_performance_alerts():
+    """Get performance alerts."""
+    try:
+        monitor = get_performance_monitor()
+        return {
+            "alerts": monitor.alert_history[-10:],  # Last 10 alerts
+            "active_alerts": len(monitor.alerts)
+        }
+    except Exception as e:
+        logger.error(f"Failed to get performance alerts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/performance/alerts")
+async def add_performance_alert(alert: Dict[str, Any] = Body(...)):
+    """Add a performance alert."""
+    try:
+        from app.core.performance_monitor import PerformanceAlert
+        
+        performance_alert = PerformanceAlert(
+            metric=alert['metric'],
+            threshold=alert['threshold'],
+            condition=alert['condition'],
+            severity=alert['severity'],
+            message=alert['message'],
+            action=alert.get('action')
+        )
+        
+        monitor = get_performance_monitor()
+        monitor.add_alert(performance_alert)
+        
+        return {"status": "success", "message": "Alert added"}
+    except Exception as e:
+        logger.error(f"Failed to add performance alert: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/performance/baselines")
+async def get_performance_baselines():
+    """Get performance baselines."""
+    try:
+        monitor = get_performance_monitor()
+        return {
+            "baselines": monitor.baselines,
+            "regression_thresholds": monitor.regression_thresholds
+        }
+    except Exception as e:
+        logger.error(f"Failed to get performance baselines: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/performance/test")
+async def run_performance_test(test_config: Dict[str, Any] = Body(...)):
+    """Run performance regression test."""
+    try:
+        from app.core.performance_monitor import PerformanceOptimizer
+        
+        monitor = get_performance_monitor()
+        optimizer = PerformanceOptimizer(monitor)
+        
+        results = optimizer.run_performance_test(test_config)
+        return results
+    except Exception as e:
+        logger.error(f"Performance test failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
