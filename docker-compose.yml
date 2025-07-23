@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://nerf_user:nerf_password@postgres:5432/nerf_studio
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+      - models_data:/app/models
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - nerf-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - nerf-network
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=nerf_studio
+      - POSTGRES_USER=nerf_user
+      - POSTGRES_PASSWORD=nerf_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nerf-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - nerf-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+  models_data:
+
+networks:
+  nerf-network:
+    driver: bridge
