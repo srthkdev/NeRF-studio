@@ -185,15 +185,15 @@ def sample_hierarchical(
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Hierarchical sampling along rays based on weights from coarse model.
-    
-    Args:
-        origins: Ray origins of shape (..., 3)
-        directions: Ray directions of shape (..., 3)
-        z_vals: Depth values from coarse sampling of shape (..., n_coarse)
-        weights: Weights from coarse model of shape (..., n_coarse)
-        n_samples: Number of additional samples per ray
-        perturb: Whether to add random perturbation to samples
-        
+
+    Usage Example:
+        >>> origins = torch.zeros(1, 3)
+        >>> directions = torch.tensor([[0.0, 0.0, 1.0]])
+        >>> z_vals = torch.linspace(2.0, 8.0, 8).view(1, 8)
+        >>> weights = torch.zeros(1, 8); weights[0, 3:5] = 1.0
+        >>> points, z_vals_fine = sample_hierarchical(origins, directions, z_vals, weights, 16, perturb=False)
+        >>> print(points.shape, z_vals_fine.shape)
+
     Returns:
         Tuple of:
             - points: Sampled points of shape (..., n_samples, 3)
@@ -522,3 +522,15 @@ def generate_camera_rays(
         combined_rays[key] = torch.cat(reshaped_rays, dim=0)
     
     return combined_rays
+
+# Example script for hierarchical sampling usage
+if __name__ == "__main__":
+    import torch
+    origins = torch.zeros(1, 3)
+    directions = torch.tensor([[0.0, 0.0, 1.0]])
+    z_vals = torch.linspace(2.0, 8.0, 8).view(1, 8)
+    weights = torch.zeros(1, 8); weights[0, 3:5] = 1.0
+    points, z_vals_fine = sample_hierarchical(origins, directions, z_vals, weights, 16, perturb=False)
+    print("Hierarchical sample points shape:", points.shape)
+    print("Hierarchical z_vals_fine shape:", z_vals_fine.shape)
+    print("Fine samples (z):", z_vals_fine)
