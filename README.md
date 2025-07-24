@@ -11,27 +11,27 @@ A production-grade Neural Radiance Fields platform that enables users to upload 
 ## 🖼️ Project Screenshots
 
 ### **3D Scene Viewer & Training Interface**
-![3D Scene Viewer](public/Screenshot%202025-07-25%20at%2012.28.55%20AM.png)
+![3D Scene Viewer](public/img1.png)
 *Interactive 3D viewer with real-time NeRF visualization and training controls*
 
 ### **Advanced Export Manager**
-![Advanced Export Manager](public/Screenshot%202025-07-25%20at%2012.28.43%20AM.png)
+![Advanced Export Manager](public/img2.png)
 *Multi-format export system supporting GLTF, OBJ, PLY, USD, FBX, and STL formats*
 
 ### **Performance Dashboard**
-![Performance Dashboard](public/Screenshot%202025-07-25%20at%2012.28.36%20AM.png)
+![Performance Dashboard](public/img3.png)
 *Real-time system metrics and training performance analytics*
 
 ### **Training Progress**
-![Training Progress](public/Screenshot%202025-07-25%20at%2012.28.27%20AM.png)
+![Training Progress](public/img4.png)
 *Live training progress with loss curves and PSNR metrics*
 
 ### **Project Management**
-![Project Management](public/Screenshot%202025-07-25%20at%2012.28.20%20AM.png)
+![Project Management](public/img5.png)
 *Project creation and image upload interface*
 
 ### **3D Visualization**
-![3D Visualization](public/Screenshot%202025-07-25%20at%2012.28.12%20AM.png)
+![3D Visualization](public/img6.png)
 *Advanced NeRF viewer with camera frustum display and coordinate axes*
 
 ## 🏗️ System Architecture
