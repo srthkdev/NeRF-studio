@@ -162,7 +162,17 @@ class JobService:
             job = await self.get_job(job_id)
             if not job:
                 return None
-            job.progress = progress_data
+            
+            # Extract progress percentage from the progress_data dictionary
+            progress_percentage = progress_data.get('progress', 0.0)
+            if isinstance(progress_percentage, (int, float)):
+                job.progress = float(progress_percentage)
+            else:
+                job.progress = 0.0
+            
+            # Store detailed progress data in metrics
+            job.metrics = {**job.metrics, **progress_data}
+            
             await self.db.commit()
             await self.db.refresh(job)
             return job

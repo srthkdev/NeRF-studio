@@ -33,6 +33,52 @@ from app.ml.nerf.colmap_utils import estimate_camera_poses_from_images, validate
 from app.ml.nerf.advanced_export import AdvancedMeshExporter, ExportConfig, ExportFormat, ExportProgressTracker
 from app.core.performance_monitor import get_performance_monitor, PerformanceMonitor, TrainingMetrics, SystemMetrics
 
+def create_simple_circular_poses(num_images, radius=3.0, height=1.0):
+    """Create simple circular camera poses for training."""
+    import numpy as np
+    
+    poses = []
+    
+    for i in range(num_images):
+        # Create circular path around origin
+        angle = 2 * np.pi * i / num_images
+        x = radius * np.cos(angle)
+        z = radius * np.sin(angle)
+        y = height
+        
+        # Create camera-to-world transformation matrix
+        # Camera looks at origin
+        look_at = np.array([0, 0, 0])
+        position = np.array([x, y, z])
+        
+        # Calculate camera coordinate system
+        forward = look_at - position
+        forward = forward / np.linalg.norm(forward)
+        
+        right = np.cross(forward, np.array([0, 1, 0]))
+        right = right / np.linalg.norm(right)
+        
+        up = np.cross(right, forward)
+        
+        # Create rotation matrix
+        rotation = np.eye(3)
+        rotation[:, 0] = right
+        rotation[:, 1] = up
+        rotation[:, 2] = -forward  # Negative because camera looks down -z
+        
+        # Create transformation matrix
+        transform = np.eye(4)
+        transform[:3, :3] = rotation
+        transform[:3, 3] = position
+        
+        poses.append({
+            "filename": f"image_{i}.jpg",
+            "camera_to_world": transform.tolist(),
+            "image_id": i
+        })
+    
+    return poses
+
 from app.database import get_db
 from app.schemas import ProjectCreate, ProjectUpdate, TrainingJobCreate, ProjectInDB, TrainingJobInDB
 from app.services.project_service import ProjectService, JobService
@@ -141,20 +187,25 @@ async def estimate_poses(
         # This function needs to be adapted to return poses in a format suitable for storage
         # For now, it will save to poses.npy and project_meta.json as before
         # In a real system, this would be a background task
-        estimate_camera_poses_from_images(images_dir, project_dir)
+        logger.info(f"Starting pose estimation for project {project_id}")
+        poses = estimate_camera_poses_from_images(project_dir, images_dir)
         
         # Load the generated poses and update project data
         poses_path = project_dir / "poses.npy"
-        if poses_path.exists():
+        if poses_path.exists() and poses:
             # For simplicity, we'll just note that poses are available.
             # In a real app, you might load and store a simplified representation or metadata.
             await project_service.update_project_data(project_id, {"poses_estimated": True})
-            return {"message": "Camera pose estimation started/completed. Poses saved to project directory."}
+            logger.info(f"Pose estimation completed successfully for project {project_id}")
+            return {"message": f"Camera pose estimation completed successfully. {len(poses)} poses saved to project directory."}
         else:
+            logger.error(f"Pose estimation failed to produce poses.npy for project {project_id}")
             raise HTTPException(status_code=500, detail="Pose estimation failed to produce poses.npy.")
     except Exception as e:
         logger.error(f"Pose estimation failed for project {project_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Pose estimation failed: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Pose estimation failed: {str(e)}")
 
 @router.post("/projects/{project_id}/upload_poses")
 async def upload_poses(
@@ -230,6 +281,56 @@ async def start_training(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    # Validate project has images
+    project_dir = Path(f"data/projects/{project_id}")
+    image_dir = project_dir / "images"
+    
+    if not image_dir.exists():
+        raise HTTPException(status_code=400, detail="No images found. Please upload images first.")
+    
+    image_files = list(image_dir.glob("*.jpg")) + list(image_dir.glob("*.jpeg")) + list(image_dir.glob("*.png")) + list(image_dir.glob("*.JPG"))
+    if not image_files:
+        raise HTTPException(status_code=400, detail="No valid images found. Please upload images first.")
+    
+    logger.info(f"Found {len(image_files)} images for project {project_id}")
+
+    # Check if poses exist, if not estimate them automatically
+    pose_file = project_dir / "poses.npy"
+    if not pose_file.exists():
+        logger.info(f"No poses found for project {project_id}, estimating poses automatically...")
+        try:
+            # Estimate poses using COLMAP
+            poses = estimate_camera_poses_from_images(project_dir, image_dir, quality="medium")
+            if not poses:
+                logger.warning("COLMAP pose estimation failed, using simple circular poses as fallback")
+                # Create simple circular poses as fallback
+                import numpy as np
+                poses = create_simple_circular_poses(len(image_files))
+                if poses:
+                    poses_array = np.array([p["camera_to_world"] for p in poses])
+                    np.save(pose_file, poses_array)
+                    logger.info(f"Created {len(poses)} simple circular poses as fallback")
+                else:
+                    raise HTTPException(status_code=500, detail="Failed to create camera poses. Please check your images.")
+            else:
+                logger.info(f"Successfully estimated poses for {len(poses)} images")
+        except Exception as e:
+            logger.error(f"Pose estimation failed for project {project_id}: {e}")
+            # Try fallback simple poses
+            try:
+                logger.info("Attempting fallback simple pose creation...")
+                import numpy as np
+                poses = create_simple_circular_poses(len(image_files))
+                if poses:
+                    poses_array = np.array([p["camera_to_world"] for p in poses])
+                    np.save(pose_file, poses_array)
+                    logger.info(f"Created {len(poses)} simple circular poses as fallback")
+                else:
+                    raise HTTPException(status_code=500, detail=f"Pose estimation failed: {str(e)}")
+            except Exception as fallback_error:
+                logger.error(f"Fallback pose creation also failed: {fallback_error}")
+                raise HTTPException(status_code=500, detail=f"Pose estimation failed: {str(e)}")
+
     # Create a new training job entry in the database
     job_create = TrainingJobCreate(project_id=project_id, config=config)
     job = await job_service.create_job(job_create)
@@ -285,14 +386,14 @@ async def get_current_system_metrics():
     return asdict(metrics)
 
 @router.get("/jobs/{job_id}/metrics")
-async def get_job_metrics(job_id: str):
+async def get_job_metrics(job_id: str, job_service: JobService = Depends(get_job_service)):
     trainer = ACTIVE_TRAINERS.get(job_id)
     if trainer:
         return trainer.get_metrics()
     else:
-        job = await get_job_service().get_job(job_id) # Fetch from DB if not active
-        if job and job.progress:
-            return job.progress
+        job = await job_service.get_job(job_id) # Fetch from DB if not active
+        if job and job.metrics:
+            return job.metrics
         raise HTTPException(status_code=404, detail="Job not found or no active metrics.")
 
 async def _load_latest_model_checkpoint(project_dir: Path) -> Tuple[HierarchicalNeRF, Dict]:

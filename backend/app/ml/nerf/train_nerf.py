@@ -105,14 +105,25 @@ class NeRFTrainer:
             image_dir = self.project_dir / "images"
             pose_file = self.project_dir / "poses.npy"
             
-            # Check if poses exist, if not create from project metadata
-            if not pose_file.exists():
-                # This part needs to be handled by the API before training starts
-                # For now, we assume poses.npy is already created by colmap_utils
-                pass
+            # Validate image directory exists
+            if not image_dir.exists():
+                raise ValueError(f"Image directory not found: {image_dir}")
             
+            # Check if poses exist
             if not pose_file.exists():
-                raise ValueError("No camera poses found. Please upload or estimate poses first.")
+                raise ValueError("No camera poses found. Please estimate poses first using the /estimate_poses endpoint.")
+            
+            # Load and validate poses
+            try:
+                poses = np.load(str(pose_file))
+                logger.info(f"Loaded poses with shape: {poses.shape}")
+                
+                # Validate pose format
+                if len(poses.shape) != 3 or poses.shape[1:] != (4, 4):
+                    raise ValueError(f"Invalid pose format. Expected (N, 4, 4), got {poses.shape}")
+                
+            except Exception as e:
+                raise ValueError(f"Failed to load poses from {pose_file}: {e}")
             
             # Create dataset
             self.dataset = NeRFDataset(
@@ -130,7 +141,7 @@ class NeRFTrainer:
                 [0.0, 0.0, 1.0]
             ], dtype=torch.float32, device=self.device)
             
-            logger.info(f"Dataset loaded: {len(self.dataset)} images")
+            logger.info(f"Dataset loaded successfully: {len(self.dataset)} images")
             
         except Exception as e:
             logger.error(f"Failed to setup dataset: {e}")
