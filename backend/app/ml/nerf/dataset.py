@@ -72,4 +72,4 @@ def get_ray_batches(dataset, intrinsics, near=2.0, far=6.0, batch_size=1024, shu
     for i in range(0, rgbs_cat.shape[0], batch_size):
         batch = {k: v[i:i+batch_size] for k, v in rays_cat.items()}
         batch['rgb'] = rgbs_cat[i:i+batch_size]
-        yield batch 
+        yield batch

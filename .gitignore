@@ -115,5 +115,8 @@ models/
 
 # Docker
 .dockerignore
-.kiro
+
+# Reference code
 nerf-master/
+
+.kiro

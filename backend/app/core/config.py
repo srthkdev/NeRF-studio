@@ -2,7 +2,9 @@ from typing import List, Union
 from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "NeRF Studio"
@@ -10,11 +12,13 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # CORS settings
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = [
+    BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",  # React dev server
         "http://localhost:5173",  # Vite dev server
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
+        "http://localhost:8080",  # Additional common ports
+        "http://127.0.0.1:8080",
     ]
     
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
@@ -26,8 +30,11 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
     
-    # Database settings
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/nerf_studio")
+    # Development mode - allow all origins if DEBUG is True
+    DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
+    
+    # Database settings - Using SQLite for simplicity
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./nerf_studio.db")
     
     # Redis settings
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")

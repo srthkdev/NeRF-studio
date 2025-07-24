@@ -2,6 +2,24 @@
 
 A production-grade Neural Radiance Fields platform that enables users to upload photos and generate interactive 3D scene reconstructions.
 
+## 🚀 Quick Setup
+
+**Automated Setup (Recommended):**
+```bash
+python setup_project.py
+```
+
+**Manual Start:**
+```bash
+# Backend
+cd backend && venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Frontend (new terminal)
+cd frontend && npm run dev
+```
+
+**Access:** http://localhost:5173
+
 ## 🚀 Features
 
 ### Core NeRF Implementation

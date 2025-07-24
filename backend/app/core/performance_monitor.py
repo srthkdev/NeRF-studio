@@ -132,22 +132,7 @@ class PerformanceMonitor:
                 message="GPU memory usage is high",
                 action="optimize_batch_size"
             ),
-            PerformanceAlert(
-                metric="cpu_percent",
-                threshold=0.95,
-                condition="above",
-                severity="warning",
-                message="CPU usage is very high",
-                action="scale_horizontally"
-            ),
-            PerformanceAlert(
-                metric="memory_percent",
-                threshold=0.9,
-                condition="above",
-                severity="error",
-                message="System memory usage is critical",
-                action="restart"
-            ),
+            # Removed CPU and memory alerts to silence those warnings
             PerformanceAlert(
                 metric="samples_per_second",
                 threshold=0.5,

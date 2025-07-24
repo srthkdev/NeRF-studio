@@ -17,6 +17,10 @@ setup(
         "trimesh>=4.0.5",
         "pyglet>=2.0.9",
         "psutil>=5.9.5",
+        "sqlalchemy>=2.0.23",
+        "alembic>=1.13.0",
+        "python-dotenv>=1.0.0",
+        "aiosqlite>=0.19.0",
     ],
     extras_require={
         "dev": [

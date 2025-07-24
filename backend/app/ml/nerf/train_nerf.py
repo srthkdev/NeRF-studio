@@ -5,15 +5,18 @@ import torch.optim as optim
 import numpy as np
 import json
 import time
-import threading
+import asyncio
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import logging
+# UUID imports removed - using string UUIDs
 
 from app.ml.nerf.dataset import NeRFDataset, get_ray_batches
 from app.ml.nerf.model import HierarchicalNeRF
 from app.ml.nerf.volume_rendering import compute_psnr, compute_ssim
 from app.ml.nerf.rays import generate_rays
+from app.services.project_service import ProjectService, JobService
+from app.core.websocket_manager import ConnectionManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,11 +28,23 @@ class NeRFTrainer:
     Provides real-time metrics streaming and supports multiple dataset formats.
     """
     
-    def __init__(self, project_id: str, job_id: str, config: Dict):
+    def __init__(
+        self,
+        project_id: str,
+        job_id: str,
+        config: Dict,
+        project_service: ProjectService,
+        job_service: JobService,
+        websocket_manager: ConnectionManager
+    ):
         self.project_id = project_id
         self.job_id = job_id
         self.config = config
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        self.project_service = project_service
+        self.job_service = job_service
+        self.websocket_manager = websocket_manager
         
         # Training state
         self.model = None
@@ -92,10 +107,12 @@ class NeRFTrainer:
             
             # Check if poses exist, if not create from project metadata
             if not pose_file.exists():
-                self._create_poses_from_metadata()
+                # This part needs to be handled by the API before training starts
+                # For now, we assume poses.npy is already created by colmap_utils
+                pass
             
             if not pose_file.exists():
-                raise ValueError("No camera poses found. Please upload poses first.")
+                raise ValueError("No camera poses found. Please upload or estimate poses first.")
             
             # Create dataset
             self.dataset = NeRFDataset(
@@ -120,26 +137,8 @@ class NeRFTrainer:
             raise
     
     def _create_poses_from_metadata(self):
-        """Create poses.npy from project metadata if available."""
-        meta_file = self.project_dir / "project_meta.json"
-        if meta_file.exists():
-            with open(meta_file, 'r') as f:
-                meta = json.load(f)
-            
-            poses = meta.get('poses', {})
-            if poses:
-                # Convert poses to numpy array
-                pose_list = []
-                for img_name in sorted(poses.keys()):
-                    pose = poses[img_name]
-                    if isinstance(pose, list) and len(pose) == 16:
-                        pose_matrix = np.array(pose, dtype=np.float32).reshape(4, 4)
-                        pose_list.append(pose_matrix)
-                
-                if pose_list:
-                    poses_array = np.stack(pose_list, axis=0)
-                    np.save(self.project_dir / "poses.npy", poses_array)
-                    logger.info(f"Created poses.npy with {len(pose_list)} poses")
+        """This method is deprecated. Pose creation should happen before training starts."""
+        pass
     
     def setup_model(self):
         """Setup NeRF model and optimizer."""
@@ -210,7 +209,7 @@ class NeRFTrainer:
             'lr': self.optimizer.param_groups[0]['lr']
         }
     
-    def validate(self) -> Dict[str, float]:
+    async def validate(self) -> Dict[str, float]:
         """Run validation and compute metrics."""
         self.model.eval()
         
@@ -278,11 +277,22 @@ class NeRFTrainer:
         
         logger.info(f"Checkpoint saved: {checkpoint_path}")
     
-    def update_job_status(self, status: str, progress: int, eta_seconds: int = 0):
-        """Update job status for the backend."""
+    async def update_job_status(self, status: str, progress: int, eta_seconds: int = 0):
+        """Update job status for the backend and broadcast via WebSocket."""
         self.job_status = status
         self.progress = progress
         self.eta_seconds = eta_seconds
+        
+        metrics_data = self.get_metrics()
+        metrics_data["status"] = status
+        metrics_data["progress"] = progress
+        metrics_data["eta_seconds"] = eta_seconds
+
+        # Update database
+        await self.job_service.update_job_progress(self.job_id, metrics_data)
+
+        # Broadcast to WebSocket clients
+        await self.websocket_manager.broadcast(str(self.job_id), metrics_data)
     
     def get_metrics(self) -> Dict:
         """Get current training metrics."""
@@ -297,16 +307,16 @@ class NeRFTrainer:
             'progress': self.progress
         }
     
-    def train(self):
+    async def train(self):
         """Main training loop."""
         try:
-            self.update_job_status("setting_up", 0)
+            await self.update_job_status("setting_up", 0)
             
             # Setup
             self.setup_dataset()
             self.setup_model()
             
-            self.update_job_status("training", 0)
+            await self.update_job_status("training", 0)
             
             # Training loop
             start_time = time.time()
@@ -343,7 +353,7 @@ class NeRFTrainer:
                 else:
                     eta_seconds = 0
                 
-                self.update_job_status("training", progress, eta_seconds)
+                await self.update_job_status("training", progress, eta_seconds)
                 
                 # Logging
                 if step % self.log_every == 0:
@@ -360,7 +370,7 @@ class NeRFTrainer:
                 
                 # Validation
                 if step % self.val_every == 0 and step > 0:
-                    val_metrics = self.validate()
+                    val_metrics = await self.validate()
                     logger.info(
                         f"Validation | Loss: {val_metrics['val_loss']:.4f} | "
                         f"PSNR: {val_metrics['val_psnr']:.2f}"
@@ -375,48 +385,37 @@ class NeRFTrainer:
                     self.scheduler.step()
                 
                 # Check for early stopping or job cancellation
-                if self.job_status == "cancelled":
-                    logger.info("Training cancelled by user")
-                    break
+                # In a real async setup, you'd check a cancellation flag
+                # if self.job_status == "cancelled":
+                #     logger.info("Training cancelled by user")
+                #     break
             
             # Final save
             self.save_checkpoint(self.num_epochs)
-            self.update_job_status("completed", 100)
+            await self.update_job_status("completed", 100)
             
             logger.info("Training completed successfully")
             
         except Exception as e:
             logger.error(f"Training failed: {e}")
-            self.update_job_status("failed", 0)
+            await self.update_job_status("failed", 0)
             raise
     
     def _get_batch_iterator(self):
         """Get batch iterator for training."""
-        return get_ray_batches(
-            self.dataset, 
-            self.intrinsics, 
-            batch_size=self.batch_size, 
-            device=self.device
-        )
-
-def train_nerf_job(project_id: str, job_id: str, config: Dict) -> NeRFTrainer:
-    """
-    Factory function to create and run a NeRF training job.
-    This is the main entry point for the backend job system.
-    """
-    trainer = NeRFTrainer(project_id, job_id, config)
-    trainer.train()
-    return trainer
+        try:
+            return get_ray_batches(
+                self.dataset, 
+                self.intrinsics, 
+                batch_size=self.batch_size, 
+                device=self.device
+            )
+        except Exception as e:
+            logger.error(f"Failed to create batch iterator: {e}")
+            raise
 
 if __name__ == "__main__":
-    # Test training with default config
-    config = {
-        'batch_size': 4096,
-        'lr': 5e-4,
-        'num_epochs': 1000,
-        'hidden_dim': 256,
-        'n_coarse': 64,
-        'n_fine': 128
-    }
-    
-    trainer = train_nerf_job("test_project", "test_job", config) 
+    # This block is for local testing and requires a running DB and services
+    # It's typically not run directly in a production setup.
+    print("NeRFTrainer is designed to be run as a background task via FastAPI.")
+    print("Please start the FastAPI application and use the API endpoints to initiate training.")

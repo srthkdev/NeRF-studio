@@ -21,37 +21,40 @@ class COLMAPProcessor:
         self.colmap_path = colmap_path
         self.workspace_dir = None
         
-    def create_workspace(self, project_dir: str, image_dir: str) -> str:
+    def create_workspace(self, project_dir: Path, image_dir: Path) -> Path:
         """
         Create COLMAP workspace directory structure.
         
         Args:
-            project_dir: Project directory
-            image_dir: Directory containing images
+            project_dir: Project directory (Path object)
+            image_dir: Directory containing images (Path object)
             
         Returns:
             Path to COLMAP workspace
         """
-        workspace_dir = os.path.join(project_dir, "colmap_workspace")
-        os.makedirs(workspace_dir, exist_ok=True)
+        workspace_dir = project_dir / "colmap_workspace"
+        workspace_dir.mkdir(exist_ok=True)
         
         # Create COLMAP directory structure
-        sparse_dir = os.path.join(workspace_dir, "sparse")
-        dense_dir = os.path.join(workspace_dir, "dense")
-        os.makedirs(sparse_dir, exist_ok=True)
-        os.makedirs(dense_dir, exist_ok=True)
+        sparse_dir = workspace_dir / "sparse"
+        dense_dir = workspace_dir / "dense"
+        sparse_dir.mkdir(exist_ok=True)
+        dense_dir.mkdir(exist_ok=True)
         
         # Copy images to workspace
-        images_workspace = os.path.join(workspace_dir, "images")
-        os.makedirs(images_workspace, exist_ok=True)
+        images_workspace = workspace_dir / "images"
+        images_workspace.mkdir(exist_ok=True)
         
         # Copy images (or create symlinks)
-        for img_file in os.listdir(image_dir):
-            if img_file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-                src = os.path.join(image_dir, img_file)
-                dst = os.path.join(images_workspace, img_file)
-                if not os.path.exists(dst):
-                    os.symlink(src, dst) if os.name != 'nt' else shutil.copy2(src, dst)
+        for img_file in image_dir.iterdir():
+            if img_file.suffix.lower() in ('.jpg', '.jpeg', '.png', '.bmp'):
+                dst = images_workspace / img_file.name
+                if not dst.exists():
+                    # Use symlink for efficiency if not on Windows, otherwise copy
+                    if os.name != 'nt':
+                        os.symlink(img_file, dst)
+                    else:
+                        shutil.copy2(img_file, dst)
         
         self.workspace_dir = workspace_dir
         return workspace_dir
@@ -309,6 +312,12 @@ class COLMAPProcessor:
             # Extract camera poses
             poses = self.extract_camera_poses()
             
+            # Save poses to poses.npy
+            if poses:
+                poses_array = np.array([p["camera_to_world"] for p in poses])
+                np.save(Path(project_dir) / "poses.npy", poses_array)
+                logger.info(f"Saved {len(poses)} poses to {Path(project_dir) / "poses.npy"}")
+
             return poses
             
         except Exception as e:
@@ -435,8 +444,8 @@ class ManualPoseProcessor:
         
         return poses
 
-def estimate_camera_poses_from_images(project_dir: str, 
-                                    image_dir: str, 
+def estimate_camera_poses_from_images(project_dir: Path, 
+                                    image_dir: Path, 
                                     quality: str = "medium") -> List[Dict[str, Any]]:
     """
     Estimate camera poses from image collection using COLMAP.
@@ -524,4 +533,4 @@ def extract_camera_poses(colmap_dir: str) -> Tuple[np.ndarray, np.ndarray]:
 
 
 if __name__ == "__main__":
-    print("COLMAP utilities module loaded successfully") 
+    print("COLMAP utilities module loaded successfully")
