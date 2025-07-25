@@ -58,3 +58,7 @@ app.include_router(api_v1.router, prefix=settings.API_V1_STR, tags=["v1"])
 @app.get("/")
 def read_root():
     return {"message": "Welcome to NeRF Studio API"}
+
+@app.get("/api/v1/health")
+def health_check():
+    return {"status": "healthy", "service": "nerf-studio-backend"}

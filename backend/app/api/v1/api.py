@@ -380,6 +380,15 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str):
 from app.core.performance_monitor import get_performance_monitor, SystemMetrics, TrainingMetrics, collect_system_metrics
 from dataclasses import asdict
 
+@router.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+@router.get("/training/metrics")
+async def training_metrics():
+    # Return a dummy message or actual metrics if available
+    return {"message": "No training running"}
+
 @router.get("/system/metrics")
 async def get_current_system_metrics():
     metrics = collect_system_metrics()

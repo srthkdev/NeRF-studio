@@ -8,60 +8,34 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://nerf_user:nerf_password@postgres:5432/nerf_studio
-      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=sqlite+aiosqlite:///./nerf_studio.db
+      - DEBUG=false
+      - MAX_CONCURRENT_JOBS=2
+      - UPLOAD_DIR=./uploads
+      - MODEL_DIR=./models
     volumes:
-      - ./backend:/app
-      - uploads_data:/app/uploads
-      - models_data:/app/models
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - nerf-network
+      - backend_data:/app/data
+      - backend_uploads:/app/uploads
+      - backend_models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "80:80"
     depends_on:
       - backend
-    networks:
-      - nerf-network
-
-  postgres:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=nerf_studio
-      - POSTGRES_USER=nerf_user
-      - POSTGRES_PASSWORD=nerf_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - nerf-network
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - nerf-network
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
-  redis_data:
-  uploads_data:
-  models_data:
-
-networks:
-  nerf-network:
-    driver: bridge
+  backend_data:
+  backend_uploads:
+  backend_models:

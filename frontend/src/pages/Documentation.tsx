@@ -98,72 +98,701 @@ const Documentation = () => {
     },
     {
       id: 'nerf-theory',
-      title: 'NeRF Theory',
+      title: 'NeRF Theory & Architecture',
       icon: BookOpen,
       content: (
-        <div className="space-y-6">
+        <div className="space-y-8">
+          {/* Introduction */}
           <div>
-            <h3 className="text-xl font-semibold mb-3">What are Neural Radiance Fields?</h3>
-            <p className="text-gray-700 mb-4">
-              Neural Radiance Fields (NeRF) represent a scene as a continuous 5D function that outputs the volume density 
-              and view-dependent emitted radiance at any point in 3D space. This allows for photorealistic novel view 
-              synthesis from a sparse set of input views.
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">🎯 What are Neural Radiance Fields (NeRF)?</h3>
+            <p className="text-gray-700 mb-6 text-lg leading-relaxed">
+              Neural Radiance Fields (NeRF) represent a revolutionary approach to 3D scene representation and novel view synthesis. 
+              Instead of traditional explicit 3D representations like meshes or point clouds, NeRF models a scene as a continuous 
+              5D function that outputs the volume density and view-dependent emitted radiance at any point in 3D space.
             </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-800 mb-2">Key Concepts</h4>
-              <ul className="text-blue-700 space-y-2">
-                <li><strong>Volume Rendering:</strong> Uses classical volume rendering techniques to project 3D densities and colors into 2D images</li>
-                <li><strong>Positional Encoding:</strong> Fourier feature encoding enables the network to represent high-frequency functions</li>
-                <li><strong>Hierarchical Sampling:</strong> Two-stage sampling strategy for efficient rendering</li>
-                <li><strong>View Dependence:</strong> Models view-dependent effects like specular reflections</li>
-              </ul>
+            
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
+              <h4 className="font-bold text-blue-900 mb-4 text-lg">🌟 Revolutionary Impact</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-blue-800 mb-2">Before NeRF</h5>
+                  <ul className="text-blue-700 text-sm space-y-1">
+                    <li>• Explicit 3D geometry required</li>
+                    <li>• Complex mesh reconstruction</li>
+                    <li>• Limited view synthesis quality</li>
+                    <li>• Manual texture mapping</li>
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-purple-800 mb-2">With NeRF</h5>
+                  <ul className="text-purple-700 text-sm space-y-1">
+                    <li>• Implicit 3D representation</li>
+                    <li>• Photorealistic novel views</li>
+                    <li>• View-dependent effects</li>
+                    <li>• Automatic texture learning</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
 
+          {/* Mathematical Foundation */}
           <div>
-            <h3 className="text-xl font-semibold mb-3">Mathematical Foundation</h3>
-            <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm">
-              <p className="mb-2">The NeRF function F maps 5D coordinates to density and color:</p>
-              <p className="text-blue-600 mb-4">F: (x, y, z, θ, φ) → (σ, c)</p>
-              <p className="mb-2">Where:</p>
-              <ul className="space-y-1 text-gray-700">
-                <li>• (x, y, z) = 3D spatial location</li>
-                <li>• (θ, φ) = 2D viewing direction</li>
-                <li>• σ = volume density</li>
-                <li>• c = view-dependent emitted radiance</li>
-              </ul>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">🧮 Mathematical Foundation</h3>
+            
+            <div className="bg-gray-50 rounded-xl p-6 mb-6">
+              <h4 className="font-bold text-gray-900 mb-4">Core NeRF Function</h4>
+              <div className="bg-white rounded-lg p-4 font-mono text-sm border">
+                <p className="mb-3 text-blue-600 font-semibold">F: (x, y, z, θ, φ) → (σ, c)</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="font-semibold text-gray-800 mb-2">Input Parameters:</p>
+                    <ul className="text-gray-700 space-y-1">
+                      <li>• <strong>(x, y, z):</strong> 3D spatial coordinates</li>
+                      <li>• <strong>(θ, φ):</strong> 2D viewing direction (spherical)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800 mb-2">Output Values:</p>
+                    <ul className="text-gray-700 space-y-1">
+                      <li>• <strong>σ:</strong> Volume density (opacity)</li>
+                      <li>• <strong>c:</strong> View-dependent radiance (RGB color)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-3">Volume Rendering Equation</h4>
+                <div className="bg-white rounded p-3 font-mono text-xs">
+                  <p className="text-blue-600 mb-2">C(r) = ∫ T(t) σ(r(t)) c(r(t), d) dt</p>
+                  <p className="text-gray-600">Where T(t) = exp(-∫ σ(r(s)) ds)</p>
+                </div>
+                <p className="text-blue-700 text-sm mt-3">
+                  This equation integrates the radiance along a ray, accounting for volume density and transparency.
+                </p>
+              </div>
+              
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-semibold text-purple-800 mb-3">Positional Encoding</h4>
+                <div className="bg-white rounded p-3 font-mono text-xs">
+                  <p className="text-purple-600 mb-2">γ(p) = [sin(2⁰πp), cos(2⁰πp), ..., sin(2^(L-1)πp), cos(2^(L-1)πp)]</p>
+                </div>
+                <p className="text-purple-700 text-sm mt-3">
+                  Fourier feature encoding enables the network to represent high-frequency functions and fine details.
+                </p>
+              </div>
             </div>
           </div>
 
+          {/* Architecture Details */}
           <div>
-            <h3 className="text-xl font-semibold mb-3">Training Process</h3>
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
-                <div>
-                  <p className="font-medium">Ray Sampling</p>
-                  <p className="text-gray-600 text-sm">Sample points along camera rays through the scene</p>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">🏗️ NeRF Architecture Deep Dive</h3>
+            
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-6">
+                <h4 className="font-bold text-green-900 mb-4">Neural Network Architecture</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <h5 className="font-semibold text-green-800 mb-2">📊 Density Network (σ)</h5>
+                    <ul className="text-green-700 text-sm space-y-1">
+                      <li>• 8 fully connected layers</li>
+                      <li>• 256 hidden units per layer</li>
+                      <li>• ReLU activation functions</li>
+                      <li>• Outputs volume density</li>
+                    </ul>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <h5 className="font-semibold text-blue-800 mb-2">🎨 Color Network (c)</h5>
+                    <ul className="text-blue-700 text-sm space-y-1">
+                      <li>• 1 additional layer</li>
+                      <li>• 128 hidden units</li>
+                      <li>• Sigmoid activation</li>
+                      <li>• Outputs RGB color</li>
+                    </ul>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <h5 className="font-semibold text-purple-800 mb-2">🔧 Skip Connections</h5>
+                    <ul className="text-purple-700 text-sm space-y-1">
+                      <li>• 4th layer skip connection</li>
+                      <li>• Preserves fine details</li>
+                      <li>• Improves gradient flow</li>
+                      <li>• Better convergence</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
-                <div>
-                  <p className="font-medium">Neural Network Evaluation</p>
-                  <p className="text-gray-600 text-sm">Query the NeRF network at each sampled point</p>
+
+              <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl p-6">
+                <h4 className="font-bold text-orange-900 mb-4">Hierarchical Sampling Strategy</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 className="font-semibold text-orange-800 mb-3">🎯 Coarse Network</h5>
+                    <ul className="text-orange-700 space-y-2">
+                      <li>• 64 samples per ray</li>
+                      <li>• Uniform sampling</li>
+                      <li>• Rough density estimation</li>
+                      <li>• Fast initial pass</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-red-800 mb-3">🎯 Fine Network</h5>
+                    <ul className="text-red-700 space-y-2">
+                      <li>• 128 samples per ray</li>
+                      <li>• Importance sampling</li>
+                      <li>• Refined density estimation</li>
+                      <li>• High-quality rendering</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
-                <div>
-                  <p className="font-medium">Volume Rendering</p>
-                  <p className="text-gray-600 text-sm">Integrate densities and colors along rays</p>
+            </div>
+          </div>
+
+          {/* Training Process */}
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">🚀 Training Process & Optimization</h3>
+            
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
+                <h4 className="font-bold text-indigo-900 mb-4">Training Pipeline</h4>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-4">
+                    <div className="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                    <div className="flex-1">
+                      <h5 className="font-semibold text-indigo-800 mb-2">Ray Generation & Sampling</h5>
+                      <p className="text-indigo-700 text-sm">
+                        Generate camera rays from input viewpoints and sample points along each ray using stratified sampling.
+                        This creates a set of 3D points to query the neural network.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-4">
+                    <div className="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                    <div className="flex-1">
+                      <h5 className="font-semibold text-indigo-800 mb-2">Neural Network Forward Pass</h5>
+                      <p className="text-indigo-700 text-sm">
+                        For each sampled point, apply positional encoding and pass through the MLP to predict density and color.
+                        The network learns to map 5D coordinates to volume density and view-dependent radiance.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-4">
+                    <div className="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                    <div className="flex-1">
+                      <h5 className="font-semibold text-indigo-800 mb-2">Volume Rendering Integration</h5>
+                      <p className="text-indigo-700 text-sm">
+                        Use the volume rendering equation to integrate densities and colors along each ray, producing 
+                        the final pixel color. This step converts the 3D representation to 2D images.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-4">
+                    <div className="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
+                    <div className="flex-1">
+                      <h5 className="font-semibold text-indigo-800 mb-2">Loss Computation & Backpropagation</h5>
+                      <p className="text-indigo-700 text-sm">
+                        Compute the photometric loss between rendered and ground truth images, then backpropagate 
+                        gradients to update network weights. This drives the learning process.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
-                <div>
-                  <p className="font-medium">Loss Computation</p>
-                  <p className="text-gray-600 text-sm">Compare rendered images with ground truth</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-yellow-800 mb-3">🎯 Loss Functions</h4>
+                  <ul className="text-yellow-700 space-y-2">
+                    <li><strong>Photometric Loss:</strong> L2 distance between rendered and ground truth pixels</li>
+                    <li><strong>Coarse Loss:</strong> Supervises the coarse network output</li>
+                    <li><strong>Fine Loss:</strong> Supervises the fine network output</li>
+                    <li><strong>Total Loss:</strong> L = L_c + L_f</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-green-800 mb-3">⚡ Optimization Techniques</h4>
+                  <ul className="text-green-700 space-y-2">
+                    <li><strong>Adam Optimizer:</strong> Adaptive learning rate optimization</li>
+                    <li><strong>Learning Rate Scheduling:</strong> Exponential decay from 5e-4 to 5e-5</li>
+                    <li><strong>Gradient Clipping:</strong> Prevents gradient explosion</li>
+                    <li><strong>Early Stopping:</strong> Prevents overfitting</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Advanced Concepts */}
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">🔬 Advanced NeRF Concepts</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-3">🎨 View-Dependent Effects</h4>
+                <p className="text-blue-700 text-sm mb-3">
+                  NeRF naturally captures view-dependent effects like specular reflections, transparency, and 
+                  subsurface scattering by conditioning the color output on viewing direction.
+                </p>
+                <ul className="text-blue-700 text-sm space-y-1">
+                  <li>• Specular highlights</li>
+                  <li>• Fresnel effects</li>
+                  <li>• Transparency</li>
+                  <li>• Subsurface scattering</li>
+                </ul>
+              </div>
+              
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-semibold text-purple-800 mb-3">🌊 Volume Density Interpretation</h4>
+                <p className="text-purple-700 text-sm mb-3">
+                  Volume density represents the probability of a ray terminating at each point, enabling 
+                  realistic modeling of transparent and semi-transparent materials.
+                </p>
+                <ul className="text-purple-700 text-sm space-y-1">
+                  <li>• Opacity control</li>
+                  <li>• Transparency modeling</li>
+                  <li>• Smoke and fog effects</li>
+                  <li>• Soft shadows</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-pink-50 to-red-50 border border-pink-200 rounded-xl p-6 mt-6">
+              <h4 className="font-bold text-pink-900 mb-4">🚀 Performance Optimizations</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-pink-800 mb-2">⚡ Speed Optimizations</h5>
+                  <ul className="text-pink-700 text-sm space-y-1">
+                    <li>• Hierarchical sampling</li>
+                    <li>• Early ray termination</li>
+                    <li>• GPU acceleration</li>
+                    <li>• Batch processing</li>
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-red-800 mb-2">🎯 Quality Improvements</h5>
+                  <ul className="text-red-700 text-sm space-y-1">
+                    <li>• Positional encoding</li>
+                    <li>• Skip connections</li>
+                    <li>• View-dependent modeling</li>
+                    <li>• Multi-scale training</li>
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-purple-800 mb-2">💾 Memory Efficiency</h5>
+                  <ul className="text-purple-700 text-sm space-y-1">
+                    <li>• Gradient checkpointing</li>
+                    <li>• Mixed precision</li>
+                    <li>• Dynamic batching</li>
+                    <li>• Memory pooling</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Applications */}
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">🌍 Real-World Applications</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-3">🎬 Entertainment & Media</h4>
+                <ul className="text-blue-700 text-sm space-y-1">
+                  <li>• Virtual production</li>
+                  <li>• 3D content creation</li>
+                  <li>• Visual effects</li>
+                  <li>• Game asset generation</li>
+                </ul>
+              </div>
+              
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-green-800 mb-3">🏗️ Architecture & Design</h4>
+                <ul className="text-green-700 text-sm space-y-1">
+                  <li>• Virtual walkthroughs</li>
+                  <li>• Interior visualization</li>
+                  <li>• Product design</li>
+                  <li>• Heritage preservation</li>
+                </ul>
+              </div>
+              
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-semibold text-purple-800 mb-3">🔬 Scientific Research</h4>
+                <ul className="text-purple-700 text-sm space-y-1">
+                  <li>• Medical imaging</li>
+                  <li>• Material science</li>
+                  <li>• Archaeology</li>
+                  <li>• Remote sensing</li>
+                </ul>
+              </div>
+              
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-800 mb-3">🤖 Robotics & AI</h4>
+                <ul className="text-orange-700 text-sm space-y-1">
+                  <li>• Scene understanding</li>
+                  <li>• Path planning</li>
+                  <li>• Object manipulation</li>
+                  <li>• Autonomous navigation</li>
+                </ul>
+              </div>
+              
+              <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="font-semibold text-yellow-800 mb-3">📱 AR/VR Applications</h4>
+                <ul className="text-yellow-700 text-sm space-y-1">
+                  <li>• Virtual reality</li>
+                  <li>• Augmented reality</li>
+                  <li>• Mixed reality</li>
+                  <li>• Spatial computing</li>
+                </ul>
+              </div>
+              
+              <div className="bg-gradient-to-br from-gray-50 to-slate-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-800 mb-3">📊 Data Visualization</h4>
+                <ul className="text-gray-700 text-sm space-y-1">
+                  <li>• 3D data exploration</li>
+                  <li>• Scientific visualization</li>
+                  <li>• Interactive exhibits</li>
+                  <li>• Educational content</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'training-guide',
+      title: 'Training Guide',
+      icon: Activity,
+      content: (
+        <div className="space-y-8">
+          {/* Training Overview */}
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">🎯 NeRF Training Overview</h3>
+            <p className="text-gray-700 mb-6 text-lg leading-relaxed">
+              Training a NeRF model is a computationally intensive process that requires careful attention to data quality, 
+              hyperparameters, and system resources. This guide covers everything you need to know for successful NeRF training.
+            </p>
+            
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-6">
+              <h4 className="font-bold text-green-900 mb-4 text-lg">⚡ Training Performance Expectations</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-green-800 mb-2">🕐 Training Time</h5>
+                  <ul className="text-green-700 text-sm space-y-1">
+                    <li>• Small scenes: 10-20 minutes</li>
+                    <li>• Medium scenes: 20-40 minutes</li>
+                    <li>• Large scenes: 40-90 minutes</li>
+                    <li>• Complex scenes: 1-3 hours</li>
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-blue-800 mb-2">💾 Memory Usage</h5>
+                  <ul className="text-blue-700 text-sm space-y-1">
+                    <li>• GPU VRAM: 4-12GB</li>
+                    <li>• System RAM: 8-32GB</li>
+                    <li>• Storage: 10-50GB</li>
+                    <li>• Checkpoints: 2-10GB</li>
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-purple-800 mb-2">🎯 Quality Metrics</h5>
+                  <ul className="text-purple-700 text-sm space-y-1">
+                    <li>• PSNR: 20-35 dB</li>
+                    <li>• SSIM: 0.7-0.95</li>
+                    <li>• LPIPS: 0.05-0.2</li>
+                    <li>• Training steps: 50K-200K</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Training Phases */}
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">📈 Training Phases & Progress</h3>
+            
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-6">
+                <h4 className="font-bold text-yellow-900 mb-4">Phase 1: Initial Scene Understanding (0-30%)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 className="font-semibold text-yellow-800 mb-3">🎯 What's Happening</h5>
+                    <ul className="text-yellow-700 space-y-2">
+                      <li>• Camera pose refinement</li>
+                      <li>• Basic scene geometry learning</li>
+                      <li>• Initial density field estimation</li>
+                      <li>• Coarse color approximation</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-orange-800 mb-3">📊 Expected Metrics</h5>
+                    <ul className="text-orange-700 space-y-2">
+                      <li>• PSNR: 15-20 dB</li>
+                      <li>• Loss: High, rapidly decreasing</li>
+                      <li>• Learning rate: Maximum</li>
+                      <li>• Progress: Slow but steady</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                <h4 className="font-bold text-blue-900 mb-4">Phase 2: Neural Network Optimization (30-70%)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 className="font-semibold text-blue-800 mb-3">🎯 What's Happening</h5>
+                    <ul className="text-blue-700 space-y-2">
+                      <li>• Detailed geometry refinement</li>
+                      <li>• View-dependent effects learning</li>
+                      <li>• Texture and material modeling</li>
+                      <li>• Fine detail capture</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-indigo-800 mb-3">📊 Expected Metrics</h5>
+                    <ul className="text-indigo-700 space-y-2">
+                      <li>• PSNR: 20-30 dB</li>
+                      <li>• Loss: Moderate, stable decrease</li>
+                      <li>• Learning rate: Gradually decreasing</li>
+                      <li>• Progress: Steady improvement</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+                <h4 className="font-bold text-green-900 mb-4">Phase 3: Fine-tuning & Convergence (70-100%)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 className="font-semibold text-green-800 mb-3">🎯 What's Happening</h5>
+                    <ul className="text-green-700 space-y-2">
+                      <li>• High-frequency detail refinement</li>
+                      <li>• Specular reflection optimization</li>
+                      <li>• Final texture polishing</li>
+                      <li>• Convergence to optimal solution</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-emerald-800 mb-3">📊 Expected Metrics</h5>
+                    <ul className="text-emerald-700 space-y-2">
+                      <li>• PSNR: 25-35 dB</li>
+                      <li>• Loss: Low, minimal decrease</li>
+                      <li>• Learning rate: Minimum</li>
+                      <li>• Progress: Fine adjustments</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Hyperparameters */}
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">⚙️ Training Hyperparameters</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-semibold text-purple-800 mb-3">🎯 Learning Rate Schedule</h4>
+                <div className="bg-white rounded p-3 font-mono text-xs mb-3">
+                  <p className="text-purple-600">Initial LR: 5e-4</p>
+                  <p className="text-purple-600">Decay: Exponential</p>
+                  <p className="text-purple-600">Final LR: 5e-5</p>
+                  <p className="text-purple-600">Warmup: 1000 steps</p>
+                </div>
+                <p className="text-purple-700 text-sm">
+                  Adaptive learning rate prevents overshooting and ensures stable convergence.
+                </p>
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-3">📊 Sampling Strategy</h4>
+                <div className="bg-white rounded p-3 font-mono text-xs mb-3">
+                  <p className="text-blue-600">Coarse samples: 64 per ray</p>
+                  <p className="text-blue-600">Fine samples: 128 per ray</p>
+                  <p className="text-blue-600">Batch size: 4096 rays</p>
+                  <p className="text-blue-600">Chunk size: 8192</p>
+                </div>
+                <p className="text-blue-700 text-sm">
+                  Hierarchical sampling balances quality and computational efficiency.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-xl p-6 mt-6">
+              <h4 className="font-bold text-gray-900 mb-4">🔧 Advanced Training Parameters</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-gray-800 mb-2">🎨 Rendering Parameters</h5>
+                  <ul className="text-gray-700 text-sm space-y-1">
+                    <li>• Near plane: 0.1</li>
+                    <li>• Far plane: 100.0</li>
+                    <li>• White background: True</li>
+                    <li>• Random background: False</li>
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-gray-800 mb-2">🔄 Optimization</h5>
+                  <ul className="text-gray-700 text-sm space-y-1">
+                    <li>• Optimizer: Adam</li>
+                    <li>• Beta1: 0.9</li>
+                    <li>• Beta2: 0.999</li>
+                    <li>• Weight decay: 0.0</li>
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-gray-800 mb-2">📈 Monitoring</h5>
+                  <ul className="text-gray-700 text-sm space-y-1">
+                    <li>• Log interval: 100 steps</li>
+                    <li>• Validation interval: 1000 steps</li>
+                    <li>• Checkpoint interval: 5000 steps</li>
+                    <li>• Early stopping: 50 epochs</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Troubleshooting */}
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">🔧 Training Troubleshooting</h3>
+            
+            <div className="space-y-6">
+              <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+                <h4 className="font-bold text-red-900 mb-4">❌ Common Training Issues</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 className="font-semibold text-red-800 mb-3">🚫 Training Won't Start</h5>
+                    <ul className="text-red-700 space-y-2">
+                      <li>• Check GPU memory availability</li>
+                      <li>• Verify image data integrity</li>
+                      <li>• Ensure camera poses are estimated</li>
+                      <li>• Check system resources</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-red-800 mb-3">📉 Poor Quality Results</h5>
+                    <ul className="text-red-700 space-y-2">
+                      <li>• Insufficient image overlap</li>
+                      <li>• Poor lighting conditions</li>
+                      <li>• Motion blur in images</li>
+                      <li>• Inaccurate camera poses</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                <h4 className="font-bold text-yellow-900 mb-4">⚠️ Performance Issues</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 className="font-semibold text-yellow-800 mb-3">🐌 Slow Training</h5>
+                    <ul className="text-yellow-700 space-y-2">
+                      <li>• Reduce batch size</li>
+                      <li>• Use fewer samples per ray</li>
+                      <li>• Enable mixed precision</li>
+                      <li>• Optimize GPU settings</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-yellow-800 mb-3">💾 Memory Issues</h5>
+                    <ul className="text-yellow-700 space-y-2">
+                      <li>• Reduce chunk size</li>
+                      <li>• Use gradient checkpointing</li>
+                      <li>• Clear GPU cache</li>
+                      <li>• Close other applications</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+                <h4 className="font-bold text-green-900 mb-4">✅ Best Practices</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 className="font-semibold text-green-800 mb-3">🎯 For Best Results</h5>
+                    <ul className="text-green-700 space-y-2">
+                      <li>• Use high-quality images</li>
+                      <li>• Ensure good camera coverage</li>
+                      <li>• Maintain consistent lighting</li>
+                      <li>• Monitor training progress</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-green-800 mb-3">⚡ For Fast Training</h5>
+                    <ul className="text-green-700 space-y-2">
+                      <li>• Use GPU acceleration</li>
+                      <li>• Optimize batch sizes</li>
+                      <li>• Enable mixed precision</li>
+                      <li>• Use efficient sampling</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Monitoring & Metrics */}
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">📊 Training Monitoring & Metrics</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-3">📈 Key Metrics to Watch</h4>
+                <ul className="text-blue-700 space-y-2">
+                  <li><strong>PSNR (Peak Signal-to-Noise Ratio):</strong> Measures image quality (higher is better)</li>
+                  <li><strong>Loss:</strong> Training loss should decrease steadily</li>
+                  <li><strong>Learning Rate:</strong> Should decay according to schedule</li>
+                  <li><strong>Steps:</strong> Training progress indicator</li>
+                </ul>
+              </div>
+              
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-semibold text-purple-800 mb-3">🎯 Quality Thresholds</h4>
+                <ul className="text-purple-700 space-y-2">
+                  <li><strong>Excellent:</strong> PSNR > 30 dB</li>
+                  <li><strong>Good:</strong> PSNR 25-30 dB</li>
+                  <li><strong>Acceptable:</strong> PSNR 20-25 dB</li>
+                  <li><strong>Poor:</strong> PSNR < 20 dB</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 mt-6">
+              <h4 className="font-bold text-indigo-900 mb-4">🔄 Training Checkpoints</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-indigo-800 mb-2">💾 Automatic Saving</h5>
+                  <ul className="text-indigo-700 text-sm space-y-1">
+                    <li>• Every 5000 steps</li>
+                    <li>• Best model preservation</li>
+                    <li>• Training state backup</li>
+                    <li>• Resume capability</li>
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-purple-800 mb-2">📁 Checkpoint Contents</h5>
+                  <ul className="text-purple-700 text-sm space-y-1">
+                    <li>• Model weights</li>
+                    <li>• Optimizer state</li>
+                    <li>• Training metrics</li>
+                    <li>• Configuration</li>
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <h5 className="font-semibold text-blue-800 mb-2">🔄 Recovery Options</h5>
+                  <ul className="text-blue-700 text-sm space-y-1">
+                    <li>• Resume training</li>
+                    <li>• Export model</li>
+                    <li>• Continue optimization</li>
+                    <li>• Model evaluation</li>
+                  </ul>
                 </div>
               </div>
             </div>

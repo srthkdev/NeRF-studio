@@ -11,14 +11,15 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Image
+  Image,
+  FileText
 } from 'lucide-react';
 import PerformanceDashboard from '../components/PerformanceDashboard';
 import AdvancedExportManager from '../components/AdvancedExportManager';
 import AdvancedNeRFViewer from '../components/AdvancedNeRFViewer';
 import TrainingView from '../components/TrainingView';
 
-const API_URL = 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 interface Project {
   id: string;
@@ -67,6 +68,7 @@ const Dashboard = () => {
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [isEstimatingPoses, setIsEstimatingPoses] = useState(false);
+  const [showTestCases, setShowTestCases] = useState(false);
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -268,6 +270,12 @@ const Dashboard = () => {
     }
   };
 
+  const handleViewTestCases = () => {
+    setShowTestCases(true);
+    // Open test_results.md in a new tab
+    window.open('/test_results.md', '_blank');
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero Section */}
@@ -429,6 +437,13 @@ const Dashboard = () => {
                 <Eye size={18} />
                 <span>Render View</span>
               </button>
+              <button
+                onClick={() => window.open('https://github.com/srthkdev/NeRF-studio/blob/main/test_results.md', '_blank')}
+                className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <FileText size={18} />
+                <span>View Test Cases</span>
+              </button>
             </div>
           </div>
 
@@ -548,6 +563,7 @@ const Dashboard = () => {
           trainingProgress={trainingProgress}
           trainingLog={trainingLog}
           trainingMetrics={trainingMetrics}
+          onViewTestCases={handleViewTestCases}
         />
       )}
 
@@ -556,6 +572,27 @@ const Dashboard = () => {
         <PerformanceDashboard systemMetrics={systemMetrics} trainingMetrics={trainingMetrics} />
         {selectedProject && <AdvancedExportManager projectId={selectedProject} />}
       </div>
+
+      {/* NeRF Demo GIF */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="bg-white rounded-2xl shadow-lg p-8 mb-8"
+      >
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">🎬 NeRF Demo Preview</h2>
+        <div className="flex justify-center">
+          <img 
+            src="https://bmild.github.io/nerf/fern_200k_256w.gif" 
+            alt="NeRF Demo - Fern Scene" 
+            className="rounded-lg shadow-lg max-w-full h-auto"
+            style={{ maxHeight: '400px' }}
+          />
+        </div>
+        <p className="text-center text-gray-600 mt-4 text-sm">
+          Example of NeRF novel view synthesis - rotating around a fern scene
+        </p>
+      </motion.div>
 
       {/* 3D Viewer */}
       {selectedProject && (

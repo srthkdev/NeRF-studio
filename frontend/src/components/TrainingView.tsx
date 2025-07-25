@@ -6,7 +6,9 @@ import {
   BarChart3, 
   Zap,
   Target,
-  Gauge
+  Gauge,
+  AlertTriangle,
+  FileText
 } from 'lucide-react';
 
 interface TrainingMetrics {
@@ -29,11 +31,22 @@ interface TrainingViewProps {
   trainingProgress: number;
   trainingLog: TrainingLogEntry[];
   trainingMetrics: TrainingMetrics | null;
+  onViewTestCases?: () => void;
 }
 
-const TrainingView = ({ trainingProgress, trainingLog, trainingMetrics }: TrainingViewProps) => {
+const TrainingView = ({ trainingProgress, trainingLog, trainingMetrics, onViewTestCases }: TrainingViewProps) => {
   const isTraining = trainingProgress > 0 && trainingProgress < 100;
   const isCompleted = trainingProgress === 100;
+  const isStarting = trainingProgress === 0 && trainingLog.length > 0;
+
+  // Calculate estimated time based on progress
+  const getEstimatedTime = () => {
+    if (trainingProgress === 0) return "10-30 minutes";
+    if (trainingProgress < 25) return "8-25 minutes remaining";
+    if (trainingProgress < 50) return "5-15 minutes remaining";
+    if (trainingProgress < 75) return "2-8 minutes remaining";
+    return "1-3 minutes remaining";
+  };
 
   return (
     <motion.div 
@@ -50,6 +63,42 @@ const TrainingView = ({ trainingProgress, trainingLog, trainingMetrics }: Traini
           <p className="text-gray-600">Real-time NeRF model training</p>
         </div>
       </div>
+
+      {/* Training Warning - Show when training starts */}
+      {isStarting && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-sm"
+        >
+          <div className="flex items-start space-x-4">
+            <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-amber-900 mb-2 text-lg">⚠️ Training Started - Please Read</h4>
+              <div className="space-y-3 text-amber-800">
+                <p className="font-semibold">
+                  <Clock className="w-4 h-4 inline mr-2" />
+                  Estimated Training Time: <span className="text-amber-900 font-bold">{getEstimatedTime()}</span>
+                </p>
+                <div className="bg-amber-100 rounded-lg p-4 space-y-2">
+                  <p className="font-medium">What to expect during training:</p>
+                  <ul className="text-sm space-y-1 ml-4">
+                    <li>• <strong>Phase 1 (0-30%):</strong> Initial scene understanding and pose refinement</li>
+                    <li>• <strong>Phase 2 (30-70%):</strong> Neural network optimization and geometry learning</li>
+                    <li>• <strong>Phase 3 (70-100%):</strong> Fine-tuning and texture refinement</li>
+                  </ul>
+                </div>
+                <p className="text-sm">
+                  <strong>Note:</strong> Training time varies based on image count, scene complexity, and hardware. 
+                  You can monitor real-time progress below. The system will automatically save checkpoints.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Progress Overview */}
@@ -82,6 +131,12 @@ const TrainingView = ({ trainingProgress, trainingLog, trainingMetrics }: Traini
                   transition={{ duration: 0.8, ease: "easeOut" }}
                 />
               </div>
+              {isTraining && (
+                <div className="text-center text-sm text-gray-600">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  {getEstimatedTime()}
+                </div>
+              )}
             </div>
 
             {/* Training Metrics */}
@@ -206,12 +261,21 @@ const TrainingView = ({ trainingProgress, trainingLog, trainingMetrics }: Traini
             <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
               <span className="text-white text-xs font-bold">✓</span>
             </div>
-            <div>
+            <div className="flex-1">
               <h4 className="font-semibold text-green-900 mb-1">Training Completed!</h4>
               <p className="text-green-800 text-sm">
                 Your NeRF model has been successfully trained. You can now explore the 3D scene viewer 
                 and export your model in various formats.
               </p>
+              {onViewTestCases && (
+                <button
+                  onClick={onViewTestCases}
+                  className="mt-3 flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>View Test Cases</span>
+                </button>
+              )}
             </div>
           </div>
         </motion.div>
