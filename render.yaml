@@ -32,7 +32,7 @@ services:
     plan: starter
     buildCommand: |
       cd frontend
-      npm ci
+      npm install
       npm run build
     staticPublishPath: ./frontend/dist
     envVars:
