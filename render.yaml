@@ -30,10 +30,7 @@ services:
     name: nerf-studio-frontend
     env: static
     plan: starter
-    buildCommand: |
-      cd frontend
-      npm install
-      npm run build
+    buildCommand: ./build.sh
     staticPublishPath: ./frontend/dist
     envVars:
       - key: NODE_VERSION

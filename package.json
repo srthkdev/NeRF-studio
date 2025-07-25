@@ -1,0 +1,14 @@
+{
+  "name": "nerf-studio",
+  "version": "1.0.0",
+  "description": "NeRF Studio - Neural Radiance Fields Platform",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "cd frontend && npm run dev",
+    "preview": "cd frontend && npm run preview"
+  },
+  "engines": {
+    "node": "18.17.0",
+    "npm": "9.6.7"
+  }
+} 
