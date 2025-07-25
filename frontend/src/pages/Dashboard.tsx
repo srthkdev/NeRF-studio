@@ -68,7 +68,7 @@ const Dashboard = () => {
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [isEstimatingPoses, setIsEstimatingPoses] = useState(false);
-  const [showTestCases, setShowTestCases] = useState(false);
+
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -166,7 +166,8 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Failed to upload images:', error);
-      alert(`Upload failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Upload failed: ${errorMessage}`);
     }
   };
 
@@ -188,7 +189,8 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Training start failed:', error);
       // You could add a toast notification here
-      alert(`Training failed to start: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Training failed to start: ${errorMessage}`);
     }
   };
 
@@ -232,7 +234,8 @@ const Dashboard = () => {
       fetchProjects();
     } catch (error) {
       console.error('Pose estimation failed:', error);
-      alert(`Pose estimation failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Pose estimation failed: ${errorMessage}`);
     } finally {
       setIsEstimatingPoses(false);
     }
@@ -270,11 +273,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleViewTestCases = () => {
-    setShowTestCases(true);
-    // Open test_results.md in a new tab
-    window.open('/test_results.md', '_blank');
-  };
+
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -563,7 +562,6 @@ const Dashboard = () => {
           trainingProgress={trainingProgress}
           trainingLog={trainingLog}
           trainingMetrics={trainingMetrics}
-          onViewTestCases={handleViewTestCases}
         />
       )}
 

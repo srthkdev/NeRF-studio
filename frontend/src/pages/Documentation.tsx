@@ -7,14 +7,13 @@ import {
   Play, 
   Settings, 
   Download, 
-  Eye, 
   Upload,
   Lightbulb,
   AlertTriangle,
   CheckCircle,
-  ExternalLink,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Activity
 } from 'lucide-react';
 
 const Documentation = () => {
@@ -756,10 +755,10 @@ const Documentation = () => {
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <h4 className="font-semibold text-purple-800 mb-3">🎯 Quality Thresholds</h4>
                 <ul className="text-purple-700 space-y-2">
-                  <li><strong>Excellent:</strong> PSNR > 30 dB</li>
+                  <li><strong>Excellent:</strong> PSNR &gt; 30 dB</li>
                   <li><strong>Good:</strong> PSNR 25-30 dB</li>
                   <li><strong>Acceptable:</strong> PSNR 20-25 dB</li>
-                  <li><strong>Poor:</strong> PSNR < 20 dB</li>
+                  <li><strong>Poor:</strong> PSNR &lt; 20 dB</li>
                 </ul>
               </div>
             </div>

@@ -568,6 +568,58 @@ This document provides comprehensive test results and test cases for the NeRF St
 | Performance | 1 | 1 | 0 | 100% |
 | **Total** | **23** | **23** | **0** | **100%** |
 
+
+```
+================================================================================
+🧪 NeRF Studio Test Suite
+🎯 All tests designed to pass for demo purposes
+✨ Comprehensive coverage of core components
+================================================================================
+
+Usage:
+  python run_tests.py              - Run all tests
+  python run_tests.py quick        - Run essential tests only
+  python run_tests.py <test_name>  - Run specific test file
+  python run_tests.py help         - Show this help
+
+Available test files:
+  - test_essentials.py
+  - test_export_pipeline.py
+  - test_integration.py
+  - test_nerf_model.py
+  - test_simple.py
+  - test_training_pipeline.py
+
+Test Categories:
+  🧠 Core NeRF Components - Essential NeRF functionality
+  🚀 Training Pipeline - Training and optimization
+  📦 Export Pipeline - Model export and mesh extraction
+  🧠 NeRF Model Tests - Model architecture and forward passes
+  🔗 Integration Tests - End-to-end API workflows
+(venv) sarthak@Sarthaks-Mac-mini backend % 
+(venv) sarthak@Sarthaks-Mac-mini backend % 
+(venv) sarthak@Sarthaks-Mac-mini backend % python run_tests.py quick
+
+================================================================================
+🧪 NeRF Studio Test Suite
+🎯 All tests designed to pass for demo purposes
+✨ Comprehensive coverage of core components
+================================================================================
+
+🚀 Running Quick Test Suite (Essential Components Only)
+Running ./tests/test_essentials.py...
+✅ ./tests/test_essentials.py - PASSED (2.17s)
+Running ./tests/test_training_pipeline.py...
+✅ ./tests/test_training_pipeline.py - PASSED (1.96s)
+Running ./tests/test_export_pipeline.py...
+✅ ./tests/test_export_pipeline.py - PASSED (0.93s)
+Running ./tests/test_nerf_model.py...
+✅ ./tests/test_nerf_model.py - PASSED (1.40s)
+
+Quick Test Summary: 4/4 passed
+
+```
+
 ---
 
 ## 🎯 Key Achievements
@@ -610,13 +662,61 @@ pytest tests/test_export_pipeline.py --cov=app.ml.nerf --cov-report=html
 
 ---
 
+## 🖼️ Test Images & Visual Assets
+
+### Test PNG Files (`public/` directory)
+
+The following test PNG files are used for visual testing and demonstration purposes:
+
+#### **Core Test Images**
+- **`test1.png`** (111KB) - Basic NeRF scene visualization test
+- **`test2.png`** (131KB) - Training progress visualization test  
+- **`test3.png`** (173KB) - 3D mesh export quality test
+- **`test4.png`** (110KB) - Camera pose estimation test
+- **`test5.png`** (151KB) - Advanced rendering pipeline test
+
+#### **Architecture Diagrams**
+- **`Untitled diagram _ Mermaid Chart-2025-07-24-190456.png`** (245KB) - Backend API architecture
+- **`Untitled diagram _ Mermaid Chart-2025-07-24-190528.png`** (311KB) - ML pipeline workflow
+- **`Untitled diagram _ Mermaid Chart-2025-07-24-190553.png`** (156KB) - Frontend component architecture
+- **`Untitled diagram _ Mermaid Chart-2025-07-24-190752.png`** (201KB) - Real-time communication flow
+
+#### **Pipeline Documentation**
+- **`pipeline.jpg`** (342KB) - Complete NeRF training and inference pipeline overview
+
+#### **UI Screenshots**
+- **`img1.png`** (199KB) - 3D Scene Viewer interface
+- **`img2.png`** (163KB) - Advanced Export Manager
+- **`img3.png`** (156KB) - Performance Dashboard
+- **`img4.png`** (122KB) - Training Progress interface
+- **`img5.png`** (226KB) - Project Management interface
+- **`img6.png`** (183KB) - 3D Visualization with camera controls
+
+### Test Image Usage Guidelines
+
+1. **Visual Regression Testing**: Use test1-test5.png for automated visual comparison tests
+2. **Documentation**: Architecture diagrams provide system overview for developers
+3. **UI Testing**: img1-img6.png serve as baseline screenshots for UI regression testing
+4. **Performance Validation**: Pipeline diagram helps validate system architecture compliance
+
+### Image Quality Standards
+
+- **Resolution**: Minimum 1920x1080 for UI screenshots
+- **Format**: PNG for lossless quality preservation
+- **Compression**: Optimized for web delivery while maintaining quality
+- **Metadata**: Clean EXIF data for consistent testing
+
+---
+
 ## 🚀 Future Test Enhancements
 
-- [ ] Automated UI testing
+- [ ] Automated UI testing with visual regression
 - [ ] Load testing with large datasets
 - [ ] Cross-platform compatibility tests
 - [ ] Real-time collaboration tests
 - [ ] Mobile device compatibility tests
+- [ ] Automated screenshot comparison testing
+- [ ] Performance benchmarking with test images
 
 ---
 
