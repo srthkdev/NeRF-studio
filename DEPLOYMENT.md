@@ -233,3 +233,173 @@ Once deployed, your NeRF Studio will be available at:
 ---
 
 **Note**: The free tier of Render has limitations on compute resources and may not be suitable for heavy NeRF training. Consider upgrading to a paid plan for production use. 
+
+## 🚀 Static Site Deployment on Render
+
+### Frontend Static Site Configuration
+
+#### **Build Commands for Render**
+
+```bash
+# Production build command (used by Render)
+cd frontend
+npm ci
+npm run build
+```
+
+#### **Environment Variables for Static Site**
+
+```bash
+# Required Environment Variables
+NODE_VERSION=18.17.0
+VITE_API_URL=https://nerf-studio.onrender.com
+VITE_APP_NAME=NeRF Studio
+VITE_APP_VERSION=1.0.0
+VITE_ENVIRONMENT=production
+```
+
+#### **Manual Deployment Commands**
+
+```bash
+# Local build for testing
+cd frontend
+npm install
+npm run build
+
+# Preview built site locally
+npm run preview
+
+# Deploy to Render (via Git push)
+git add .
+git commit -m "Deploy frontend static site"
+git push origin main
+```
+
+#### **Render Configuration (render.yaml)**
+
+```yaml
+# Frontend Static Site
+- type: web
+  name: nerf-studio-frontend
+  env: static
+  plan: starter
+  buildCommand: |
+    cd frontend
+    npm ci
+    npm run build
+  staticPublishPath: ./frontend/dist
+  envVars:
+    - key: NODE_VERSION
+      value: 18.17.0
+    - key: VITE_API_URL
+      value: https://nerf-studio.onrender.com
+    - key: VITE_APP_NAME
+      value: NeRF Studio
+    - key: VITE_APP_VERSION
+      value: 1.0.0
+    - key: VITE_ENVIRONMENT
+      value: production
+  routes:
+    - type: rewrite
+      source: /*
+      destination: /index.html
+  headers:
+    - path: /*
+      name: Cache-Control
+      value: public, max-age=31536000, immutable
+    - path: /assets/*
+      name: Cache-Control
+      value: public, max-age=31536000, immutable
+    - path: /api/*
+      name: Cache-Control
+      value: no-cache, no-store, must-revalidate
+```
+
+### **Build Optimization Features**
+
+1. **Code Splitting**: Vendor, Three.js, and Chart.js libraries are split into separate chunks
+2. **Minification**: Terser minification for optimal bundle size
+3. **Caching**: Long-term caching for static assets
+4. **SPA Routing**: All routes redirect to index.html for client-side routing
+
+### **Performance Optimizations**
+
+- **Bundle Analysis**: Use `npm run build -- --analyze` to analyze bundle size
+- **Image Optimization**: All images in `/public` are optimized for web delivery
+- **CDN Ready**: Static assets are configured for CDN deployment
+- **Gzip Compression**: Enabled by default on Render
+
+### **Environment-Specific Configurations**
+
+#### **Development Environment**
+```bash
+# Local development
+npm run dev
+# API URL: http://localhost:8000
+```
+
+#### **Staging Environment**
+```bash
+# Staging build
+VITE_API_URL=https://staging-nerf-backend.onrender.com
+npm run build
+```
+
+#### **Production Environment**
+```bash
+# Production build
+VITE_API_URL=https://nerf-studio.onrender.com
+VITE_ENVIRONMENT=production
+npm run build
+```
+
+### **Deployment Checklist**
+
+- [ ] Backend API is deployed and accessible
+- [ ] Environment variables are configured in Render dashboard
+- [ ] Build command completes successfully
+- [ ] Static files are generated in `frontend/dist/`
+- [ ] SPA routing works correctly
+- [ ] API calls are working from frontend
+- [ ] Assets are loading properly
+- [ ] Performance metrics are acceptable
+
+### **Troubleshooting**
+
+#### **Build Failures**
+```bash
+# Clear node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Check for TypeScript errors
+npm run lint
+
+# Verify build locally
+npm run build
+```
+
+#### **Runtime Issues**
+```bash
+# Check environment variables
+echo $VITE_API_URL
+
+# Verify API connectivity
+curl https://nerf-studio.onrender.com/api/v1/health
+
+# Check browser console for errors
+```
+
+#### **Performance Issues**
+```bash
+# Analyze bundle size
+npm run build -- --analyze
+
+# Check asset sizes
+ls -la frontend/dist/assets/
+
+# Verify caching headers
+curl -I https://your-frontend.onrender.com/assets/main.js
+```
+
+--- 
