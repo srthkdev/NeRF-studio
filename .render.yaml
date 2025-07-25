@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: nerf-studio-frontend
+    env: static
+    plan: starter
+    buildCommand: |
+      cd frontend
+      npm install
+      npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: VITE_API_URL
+        value: https://nerf-studio.onrender.com
+      - key: VITE_APP_NAME
+        value: NeRF Studio
+      - key: VITE_APP_VERSION
+        value: 1.0.0
+      - key: VITE_ENVIRONMENT
+        value: production
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html 
